@@ -2,7 +2,7 @@
 
 This package contains an implementation of a neural network designed to recognize digits drawn by the user. The library allows you to experiment with different weight initialization techniques, activation functions, and hyperparameters, enabling you to tailor the network to your needs. Furthermore, you can easily adapt it for broader problems, such as image classification (e.g., cat vs. dog).
 
-<div style="text-align: center;">
+<div style="display:flex; justify-content: center;">
   <img src="img/mintty_HxflF9c7tT.gif" width="250"/>
 </div>
 
