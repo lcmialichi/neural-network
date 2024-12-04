@@ -1,19 +1,19 @@
 import numpy as np
-from activations.Sigmoid import Sigmoid
-from Activation import Activation
+from neural_network.activations import Sigmoid
+from neural_network.core import Activation
 from typing import Union
-from Initialization import Initialization
-from initializations.Xavier import Xavier
+from neural_network.core import Initialization
+from neural_network.initializations import Xavier
 
 class Neuron:
-    def __init__(self, config: dict, initialization: Initialization = Xavier()):
+    def __init__(self, config: dict, initializer: Initialization = Xavier()):
         self.input_size: int = config.get('input_size', 0)
         self.hidden_size: int = config.get('hidden_size', 0)
         self.output_size: int = config.get('output_size', 0)
         self.layers_number: int = config.get('layers_number', 3)
         self.learning_rate: float = config.get('learning_rate', 0.01)
         self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
-        self.weights = initialization.generate_layers(
+        self.weights = initializer.generate_layers(
             self.input_size, self.output_size, self.hidden_size, self.layers_number
         )
 
@@ -28,7 +28,7 @@ class Neuron:
     def forward(self, x: np.ndarray) -> np.ndarray:
         self.hidden_outputs = []
         output = x
-        for i, layer in enumerate(self.weights[:-1]):
+        for _, layer in enumerate(self.weights[:-1]):
             output = self.activation.activate(np.dot(output, layer))
             self.hidden_outputs.append(output)
         

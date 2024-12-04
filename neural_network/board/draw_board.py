@@ -1,16 +1,19 @@
 import tkinter as tk
 from PIL import Image
 import numpy as np
-from typing import Callable, Union
+from typing import Callable
 
 class DrawBoard:
     def __init__(self, root: tk.Tk, size: int = 280, line_weight: int = 7):
-        self.root = root
+        self.__root = root
         self.__canvas_size = size
         self.__line_weight = line_weight
 
     def set_handler(self, handler: Callable) -> None:
         self.handler = handler
+
+    def root(self) -> tk.Tk:
+        return self.__root
 
     def paint(self, event):
         if self.last_x and self.last_y:
@@ -50,22 +53,21 @@ class DrawBoard:
     def get_image_as_vector(self):
         resized_image = self.image.resize((28, 28), Image.LANCZOS)
         image_array = np.array(resized_image) / 255
-        print(image_array)
         return image_array.flatten().reshape(1, -1)
     
     def draw(self):
-        self.canvas = tk.Canvas(self.root, width=self.__canvas_size, height=self.__canvas_size, bg="black")
+        self.canvas = tk.Canvas(self.root(), width=self.__canvas_size, height=self.__canvas_size, bg="black")
         self.canvas.pack(padx=5, pady=5)
 
         self.image = Image.new("L", (self.__canvas_size, self.__canvas_size), 0)
         self.last_x, self.last_y = None, None
 
-        self.feedback_label = tk.Label(self.root, text="Desenhe um número e pressione Enter para prever")
+        self.feedback_label = tk.Label(self.root(), text="Desenhe um número e pressione Enter para prever")
         self.feedback_label.pack(pady=5)
 
-        tk.Button(self.root, text="Enviar", command=self.predict_digit).pack(pady=5)
-        tk.Button(self.root, text="Limpar", command=self.clear_canvas).pack(pady=5)
-        self.root.bind("<Return>", self.predict_digit)
+        tk.Button(self.root(), text="Enviar", command=self.predict_digit).pack(pady=5)
+        tk.Button(self.root(), text="Limpar", command=self.clear_canvas).pack(pady=5)
+        self.root().bind("<Return>", self.predict_digit)
 
         self.canvas.bind("<B1-Motion>", self.paint)
         self.canvas.bind("<ButtonRelease-1>", self.reset_cursor)

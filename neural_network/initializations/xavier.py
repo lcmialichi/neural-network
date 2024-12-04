@@ -1,6 +1,5 @@
-from Initialization import Initialization
+from neural_network.core import Initialization
 import numpy as np
-from typing import Union
 
 class Xavier(Initialization):
        

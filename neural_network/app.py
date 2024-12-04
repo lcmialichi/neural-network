@@ -1,8 +1,8 @@
 import tkinter as tk
-from Neuron import Neuron
-from DrawBoard import DrawBoard
+from neural_network.core import Neuron
+from neural_network.board import DrawBoard
 import numpy as np
-from Train import Train
+from neural_network.train import Train
 from typing import Callable, Union
 
 class App:
@@ -27,8 +27,8 @@ class App:
     def board(self) -> DrawBoard:
         return self.__board
     
-    def train(self, file_name: str,  epochs: int =10, batch_size: int =32, plot: Union[None, Callable] = None ) -> None: 
-        self.__train.train_with_csv(file_name, epochs, batch_size, plot)
+    def train(self, data_file: str,  epochs: int =10, batch_size: int =32, plot: Union[None, Callable] = None ) -> None: 
+        self.__train.train_with_csv(data_file, epochs, batch_size, plot)
     
     def predict_image(self, image: np.ndarray):
         return np.argmax(self.model().predict(image))

@@ -1,4 +1,4 @@
-from Neuron import Neuron
+from neural_network.core.neuron import Neuron
 import pandas as pd
 import numpy as np
 from typing import Callable, Union

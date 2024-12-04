@@ -1,4 +1,4 @@
-import Activation
+from neural_network.core import Activation
 import numpy as np
 from typing import Union
 

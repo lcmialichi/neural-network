@@ -1,6 +1,5 @@
-from Initialization import Initialization
+from neural_network.core import Initialization
 import numpy as np
-
 class He(Initialization):
 
     def generate_layers(self, input_size, output_size, hidden_size, layers_number):
