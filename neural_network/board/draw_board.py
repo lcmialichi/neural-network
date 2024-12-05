@@ -2,15 +2,15 @@ import tkinter as tk
 from PIL import Image
 import numpy as np
 from typing import Callable
+from neural_network.board.drawable import Drawable
 
-class DrawBoard:
-    def __init__(self, root: tk.Tk, size: int = 280, line_weight: int = 7):
+class DrawBoard(Drawable):
+    def __init__(self, title: str, size: int = 280, line_weight: int = 7):
+        root = tk.Tk()
+        root.title(title)
         self.__root = root
         self.__canvas_size = size
         self.__line_weight = line_weight
-
-    def set_handler(self, handler: Callable) -> None:
-        self.handler = handler
 
     def root(self) -> tk.Tk:
         return self.__root
@@ -47,7 +47,7 @@ class DrawBoard:
 
     def predict_digit(self, event=None):
         self.feedback_label.config(text="Previsão em andamento...")
-        prediction = self.handler(self.get_image_as_vector())
+        prediction = self.get_handler()(self.get_image_as_vector())
         self.feedback_label.config(text=f"Previsão: {prediction}")
 
     def get_image_as_vector(self):
@@ -71,3 +71,7 @@ class DrawBoard:
 
         self.canvas.bind("<B1-Motion>", self.paint)
         self.canvas.bind("<ButtonRelease-1>", self.reset_cursor)
+
+
+    def loop(self):
+        self.root().mainloop()

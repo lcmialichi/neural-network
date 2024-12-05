@@ -1,4 +1,4 @@
 __pycache__/
 *.pyc
-mnist_train.csv
+data/
 neural_network.egg-info

@@ -1,5 +1,6 @@
 from neural_network.core import Neuron
 from neural_network.app import App
+from neural_network.board import DrawBoard
 from neural_network.board import Chart
 from neural_network.initializations import He
 from neural_network.activations import Relu
@@ -15,17 +16,23 @@ def main():
     }, initializer=He())
 
     app = App.new_instance_with_model(
-        model=model, title="Reconhecimento de Dígitos"
+        model=model, board=DrawBoard(
+            title="Reconhecimento de Dígitos",
+            size=280,
+            line_weight=7
+        )
     )
     app.model().set_activation(Relu())
-    app.board().set_handler(app.predict_image)
+    app.board().set_handler(handler=app.predict_image)
+    app.board().set_labels(path_json="./labels/number.json")
     app.draw()
-    app.train(
-        data_file="data/mnist_train.csv",
+    app.train_csv(
+        data_file="data/numbers/mnist_train.csv",
         epochs=20,
         batch_size=32,
         plot=Chart().plot_activations,
     )
+
     app.loop()
 
 if __name__ == "__main__":
