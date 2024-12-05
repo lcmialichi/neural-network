@@ -72,7 +72,7 @@ model = Neuron({
     'output_size': 10, 
     'layers_number': 4,
     'learning_rate': 0.001,
-    'regularization_lambda': 0.0001
+    'regularization_lambda': 0.0001,
     'dropout_rate': 0.2  # Set dropout rate to 20%
 }, He())
 
