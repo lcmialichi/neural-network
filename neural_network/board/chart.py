@@ -17,7 +17,7 @@ class Chart:
                 color = 'green'
                 self.__accurace += 1
                
-            plt.plot(predicted_index, 1, 'o', color=color, markersize=10, label="Previsão" if i == 0 else "")
+            plt.plot(predicted_index, i, 'o', color=color, markersize=10, label="Previsão" if i == 0 else "")
 
         plt.title(f'Epoch {epoch + 1} - Loss: {loss:.4f} - Accuracy: {accuracy:.4f}')
         

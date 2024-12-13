@@ -13,8 +13,9 @@ class ImageProcessor:
     def _load_image(self, image_path: str) -> np.ndarray:
         try:
             image = Image.open(image_path).convert('RGB')
-            image = image.resize(self.image_size)
-            return np.array(image)
+            img_data = np.array(image.resize(self.image_size))
+            img_data = np.transpose(img_data, (2, 0, 1)) 
+            return img_data
         except Exception as e:
             raise SystemError(f"Não foi possível processar a imagem {image_path}: {e}")
 
@@ -22,7 +23,7 @@ class ImageProcessor:
         images = []
         for image_file in os.listdir(class_path):
             image_path = os.path.join(class_path, image_file)
-            images.append(self._load_image(image_path).flatten())
+            images.append(self._load_image(image_path))
         return images
 
     def _process_sample_folder(self, sample_folder: str) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:

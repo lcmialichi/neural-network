@@ -1,4 +1,4 @@
-from neural_network.core import Neuron
+from neural_network.core import DenseNeuron
 from neural_network.app import App
 from neural_network.board import DrawBoard
 from neural_network.board import Chart
@@ -6,7 +6,7 @@ from neural_network.initializations import He
 from neural_network.activations import Relu
 
 def main():
-    model = Neuron({
+    model = DenseNeuron({
         'input_size': 784,
         'hidden_size': 256,
         'output_size': 10,

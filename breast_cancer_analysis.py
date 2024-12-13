@@ -1,4 +1,4 @@
-from neural_network.core import Neuron
+from neural_network.core import CnnNetwork
 from neural_network.app import App
 from neural_network.board import Chart
 from neural_network.initializations import He
@@ -6,15 +6,17 @@ from neural_network.activations import Relu
 from neural_network.board import FileInput
 
 def main():
-    model = Neuron({
-        'input_size': 7500,
-        'hidden_size': 256,
+    model = CnnNetwork(
+        filter_size=(3,3),
+        config={
+        'input_size': 50 * 50 * 3,
+        'hidden_size': 1024,
         'output_size': 2,
-        'layers_number': 5,
-        'learning_rate': 0.0005,
+        'layers_number': 3,
+        'learning_rate': 0.0001,
         'regularization_lambda': 0.0001,
-        'dropout_rate': 0.2
-    }, initializer=He())
+        'dropout_rate': 0.4
+    })
 
     app = App.new_instance_with_model(
         model=model, board=FileInput(
@@ -29,7 +31,7 @@ def main():
     app.board().set_labels(path_json="./labels/breast_cancer.json")
 
     app.train_images(
-        base_dir="./data/breast_cancer",
+        base_dir="./data/breast-histopathology-images",
         image_size=(50,50),
         epochs=10,
         batch_size=32,
