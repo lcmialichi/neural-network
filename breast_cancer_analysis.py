@@ -10,12 +10,12 @@ def main():
         filter_size=(3,3),
         config={
         'input_size': 50 * 50 * 3,
-        'hidden_size': 1024,
+        'hidden_size': 512,
         'output_size': 2,
-        'layers_number': 3,
+        'layers_number': 4,
         'learning_rate': 0.0001,
         'regularization_lambda': 0.0001,
-        'dropout_rate': 0.4
+        'dropout_rate': 0.3
     })
 
     app = App.new_instance_with_model(

@@ -10,50 +10,36 @@ class CnnNetwork(DenseNetwork):
         self, 
         config: dict, 
         initializer: Xavier = Xavier(), 
-        filter_size: tuple[int, int] = (3, 3), 
-        stride: int = 1, 
-        padding_type: str = "SAME", 
-        num_filters: int = 3
     ):
         super().__init__(config, initializer)
   
-        self.filter_size = filter_size
-        self.stride = stride
-        self.padding_type = padding_type
-        self.num_filters = num_filters
+        self.filter_size = config.get('filter_size', (3, 3))
+        self.stride = config.get('stride', 1)
+        self.padding_type = config.get('padding_type', 'SAME')
+        self.num_filters = config.get('num_filters', 3)
         
         self.filters = initializer.generate_filters(
             channels_number=config.get('input_channels', 3),
-            filter_size=filter_size,
-            num_filters=num_filters
+            filter_size=self.filter_size,
+            num_filters=self.num_filters
         )
      
 
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
 
-        batch_size, _, _, _ = x.shape
-       
-        convolved_outputs = []
-        for i in range(batch_size):
-            convolved = self.convolve(x[i])
-            convolved_outputs.append(convolved)
-        
-        self.cached_convolutions = np.array(convolved_outputs)
-   
-        return super().forward(self.cached_convolutions.reshape(batch_size, -1), dropout)
+        self.cached_convolutions = np.array(self.convolve(x))
+        return super().forward(self.cached_convolutions.reshape(x.shape[0], -1), dropout)
 
     def convolve(self, input: np.ndarray) -> np.ndarray:
-        matrix = input
-        if self.padding_type == "SAME":
-            matrix = self.add_padding(matrix)
+        matrix = self.add_padding(input)
 
         fx, fy = self.filter_size
-        _, ix, iy = matrix.shape
+        b, _, ix, iy = matrix.shape
 
         output_height = (ix - fx) // self.stride + 1
         output_width = (iy - fy) // self.stride + 1
 
-        output = np.zeros((self.num_filters, output_height, output_width))
+        output = np.zeros((b, self.num_filters, output_height, output_width))
      
         for f in range(self.num_filters):
             for x in range(output_height):
@@ -63,16 +49,13 @@ class CnnNetwork(DenseNetwork):
                     end_x = start_x + fx
                     end_y = start_y + fy
 
-                    if end_x > matrix.shape[1] or end_y > matrix.shape[2]:
-                        continue
-
-                    output[f, x, y] =  np.sum(matrix[:, start_x:end_x, start_y:end_y] * self.filters[f, :, :, :])
+                    output[:, f, x, y] =  np.sum(matrix[:,:, start_x:end_x, start_y:end_y] * self.filters[f])
         return output
 
 
     def add_padding(self, rgb_matrix: np.ndarray):
         fx, fy = self.filter_size
-        _, ix, iy = rgb_matrix 
+        _ ,_, ix, iy = rgb_matrix.shape
 
         if self.padding_type == "SAME":
             if self.stride == 1:
@@ -88,19 +71,14 @@ class CnnNetwork(DenseNetwork):
         self.pad_x = pad_x
         self.pad_y = pad_y
 
-        return np.pad(rgb_matrix, ((0, 0), (pad_x, pad_x), (pad_y, pad_y)), mode='constant', constant_values=0)
+        return np.pad(rgb_matrix, ((0,0), (0, 0), (pad_x, pad_x), (pad_y, pad_y)), mode='constant', constant_values=0)
     
-    def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray) -> None:
+    def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
         batch_size = x.shape[0]
-
-        if self.padding_type == "SAME":
-            x_padded = np.array([self.add_padding(x[i]) for i in range(batch_size)])
-        else:
-            x_padded = x
-
-        dense_grad = super().backward(self.cached_convolutions.reshape(batch_size, -1), y, output)
+        x_padded = self.add_padding(x)
 
         grad_filters = np.zeros_like(self.filters)
+        dense_grad = super().backward(self.cached_convolutions.reshape(batch_size, -1), y, output)
 
         dense_grad = dense_grad.reshape(batch_size, self.num_filters,
                                         self.cached_convolutions.shape[2],
@@ -109,7 +87,6 @@ class CnnNetwork(DenseNetwork):
         _, _, size_x, size_y = dense_grad.shape
 
         fx, fy = self.filter_size
-        _, _ = x_padded.shape[2], x_padded.shape[3]
 
         for sx in range(size_x):
             for sy in range(size_y):
@@ -119,11 +96,15 @@ class CnnNetwork(DenseNetwork):
                 end_y = start_y + fy
 
                 region = x_padded[:, :, start_x:end_x, start_y:end_y]
-                
+                    
                 for f in range(self.num_filters):
-                    grad_filters[f] += np.sum(dense_grad[:, f, sx, sy][:, np.newaxis, np.newaxis, np.newaxis] * region, axis=0)
+                    grad_filters[f] += np.sum(
+                        dense_grad[:, f, sx, sy][:, np.newaxis, np.newaxis, np.newaxis] * region,
+                        axis=0
+                    )
 
         self.filters -= self.learning_rate * grad_filters
+        return grad_filters
 
 
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
