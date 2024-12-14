@@ -6,9 +6,7 @@ from neural_network.activations import Relu
 from neural_network.board import FileInput
 
 def main():
-    model = CnnNetwork(
-        filter_size=(3,3),
-        config={
+    model = CnnNetwork({
         'input_size': 50 * 50 * 3,
         'hidden_size': 512,
         'output_size': 2,

@@ -12,7 +12,6 @@ class CnnNetwork(DenseNetwork):
         initializer: Xavier = Xavier(), 
     ):
         super().__init__(config, initializer)
-  
         self.filter_size = config.get('filter_size', (3, 3))
         self.stride = config.get('stride', 1)
         self.padding_type = config.get('padding_type', 'SAME')
@@ -108,7 +107,6 @@ class CnnNetwork(DenseNetwork):
 
 
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
-        self.y_true.append(y_batch)
         output_batch = self.forward(x_batch, True)
         self.backward(x_batch, y_batch, output_batch)
         return output_batch

@@ -26,7 +26,6 @@ class DenseNetwork(BaseNetwork):
        
         self.hidden_output: list = []
         self.hidden_activations: list = []
-        self.y_true: list = []
         self.activation: Activation = Sigmoid()
 
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
@@ -70,7 +69,6 @@ class DenseNetwork(BaseNetwork):
 
 
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
-        self.y_true.append(y_batch)
         output_batch = self.forward(x_batch, True)
         self.backward(x_batch, y_batch, output_batch)
         return output_batch
