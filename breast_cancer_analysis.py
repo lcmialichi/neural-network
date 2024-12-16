@@ -4,17 +4,27 @@ from neural_network.board import Chart
 from neural_network.initializations import He
 from neural_network.activations import Relu
 from neural_network.board import FileInput
+from neural_network.core import Padding
 
 def main():
-    model = CnnNetwork({
-        'input_size': 50 * 50 * 3,
-        'hidden_size': 512,
-        'output_size': 2,
-        'layers_number': 4,
-        'learning_rate': 0.0001,
-        'regularization_lambda': 0.0001,
-        'dropout_rate': 0.3
-    })
+    
+    config = CnnNetwork.config()                          \
+            .input_shape(channels=3, height=50, width=50) \
+            .add_hidden_layer(size=128)                   \
+            .add_hidden_layer(size=128)                   \
+            .output_size(size=2)                          \
+            .learning_rate(rate=0.0001)                   \
+            .regularization_lambda(regularization=0.0001) \
+            .dropout_rate(rate=0.3)                       \
+            .add_filter(filter_number=16)                 \
+            .add_filter(filter_number=32)                 \
+            .add_filter(filter_number=64)                 \
+            .stride(stride=1)                             \
+            .with_activation(Relu())                      \
+            .with_initializer(He())                       \
+            .enable_optimazer()
+            
+    model = CnnNetwork(config)
 
     app = App.new_instance_with_model(
         model=model, board=FileInput(

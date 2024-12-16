@@ -39,15 +39,15 @@ class FileInput(Drawable):
     def send_file(self):
         if self.selected_file_path:
             try:
-                label = self.get_label(self.get_handler()(self.get_image_as_vector()))
+                label = self.get_label(self.get_handler()(np.array([self.get_image_as_matrix()])))
                 messagebox.showinfo("Analise completa", f"{label}!")
             except Exception as e:
                 messagebox.showerror("Erro", f"Erro ao executar a ação: {e}")
 
-    def get_image_as_vector(self):
+    def get_image_as_matrix(self):
         image = Image.open(self.selected_file_path).convert('RGB')
         image = image.resize(self.image_size)
-        return np.array(image).flatten()
+        return np.transpose(image, (2, 0, 1))
     
     def draw(self):
         self.frame.pack(pady=20)

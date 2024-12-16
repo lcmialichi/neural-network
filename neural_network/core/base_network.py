@@ -30,7 +30,7 @@ class BaseNetwork(ABC):
     @abstractmethod
     def get_trainer(self):
         pass
-
+    
     def get_output_size(self) -> int:
         return self.output_size
 

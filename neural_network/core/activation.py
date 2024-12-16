@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Union
 
 class Activation(ABC):
 
     @abstractmethod
-    def activate(self, x: float, alpha: Union[int, float, None] = None) -> Union[float, int]:
+    def activate(self, x, alpha = None):
         pass
     
     @abstractmethod
-    def derivate(self, x: float, alpha: Union[int, float, None] = None) :
+    def derivate(self, x, alpha = None):
         pass

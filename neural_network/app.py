@@ -26,7 +26,7 @@ class App:
         self.__model.get_trainer().train(data_file, epochs, batch_size, plot)
 
     def train_images(self, base_dir, image_size=(50, 50), epochs: int = 10, batch_size=32, plot: Union[None, Callable] = None ) -> None: 
-        self.__model.get_trainer().train(base_dir, image_size, epochs, epochs, plot)
+        self.__model.get_trainer().train(base_dir, image_size, epochs, batch_size, plot)
     
     def predict_image(self, image: np.ndarray):
         return np.argmax(self.model().predict(image))

@@ -1,10 +1,9 @@
 from neural_network.core import Activation
 import numpy as np
-from typing import Union
 
 class LeakyRelu(Activation):
-    def activate(self, x: float, alpha: Union[int, float, None] = 0.1) -> Union[float, int]:
+    def activate(self, x, alpha = 0.1):
         return np.where(x > 0, x, x * alpha)
 
-    def derivate(self, x: float, alpha: Union[int, float, None] = 0.1) -> Union[float, int]:
+    def derivate(self, x, alpha = 0.1):
         return (x > 0).astype(float)
