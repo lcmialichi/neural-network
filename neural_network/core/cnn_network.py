@@ -20,6 +20,7 @@ class CnnNetwork(DenseNetwork):
         self.input_shape = config.get('input_shape', (3, 50, 50))
         self.filters = initializer.generate_filters(self.filters_options, self.input_shape[0])
         config['input_size'] = self.get_input_size(self.input_shape, self.filters_options)
+        self.cached_convolutions = []
         super().__init__(config, initializer=initializer)
         
         
@@ -28,26 +29,26 @@ class CnnNetwork(DenseNetwork):
         return CnnConfiguration()
      
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
-        self.cached_convolutions = self.convolve_im2col(x, self.filters, self.stride)
-        activated_output = self.activation.activate(self.cached_convolutions)
+        self.cached_convolutions = []
+        activated_output = self.activation.activate(self.convolve_im2col(x, self.filters, self.stride))
         return super().forward(activated_output.reshape(x.shape[0], -1), dropout)
 
     def im2col(self, image, filter_size, stride):
         batch, channels, height, width = image.shape
-        f, fw = filter_size
-        output_height = (height - f) // stride + 1
+        fh, fw = filter_size
+        output_height = (height - fh) // stride + 1
         output_width = (width - fw) // stride + 1
 
-        col = np.zeros((batch, channels, f, fw, output_height, output_width))
+        col = np.zeros((batch, channels, fh, fw, output_height, output_width))
 
-        for y in range(f):
+        for y in range(fh):
             y_max = y + stride * output_height
             for x in range(fw):
                 x_max = x + stride * output_width
                 col[:, :, y, x, :, :] = image[:, :, y:y_max:stride, x:x_max:stride]
 
-        col = col.transpose(0, 4, 5, 1, 2, 3).reshape(batch * output_height * output_width, -1)
-        return col
+        return col.transpose(0, 4, 5, 1, 2, 3).reshape(batch * output_height * output_width, channels * fh * fw)
+
 
     def convolve_im2col(self, input, filters_list: list, stride: int):
         output = input
@@ -61,7 +62,7 @@ class CnnNetwork(DenseNetwork):
             )
 
             padded_input = self.add_padding(output,fh, fw)
-
+          
             col = self.im2col(padded_input, (fh, fw), stride)
             filters_reshaped = filters.reshape(num_filters, -1).T
 
@@ -71,8 +72,11 @@ class CnnNetwork(DenseNetwork):
             output_width = (padded_input.shape[3] - fw) // stride + 1
 
             conv_output = conv_output.reshape(batch_size, output_height, output_width, num_filters)
+            self.cached_convolutions.append(conv_output)
             output = conv_output.transpose(0, 3, 1, 2) 
+
             channels = num_filters 
+            
         return output
 
 
@@ -122,31 +126,7 @@ class CnnNetwork(DenseNetwork):
         return pad_x, pad_y
             
     def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
-        batch_size = x.shape[0]
-        
-        dense_grad = super().backward(self.cached_convolutions.reshape(batch_size, -1), y, output)
-        dense_grad = dense_grad.reshape(batch_size, self.cached_convolutions.shape[1],
-                                        self.cached_convolutions.shape[2],
-                                        self.cached_convolutions.shape[3])
-
-        derivative = self.activation.derivate(self.cached_convolutions)
-
-        for layer_idx in range(len(self.filters) - 1, -1, -1):
-            filters = self.filters[layer_idx]
-            _, _, fh, fw = filters.shape
-
-            pad_x, pad_y = self.get_padding(self.padding_type, fh, fw)
-
-            output_height = (x.shape[2] + 2 * pad_x - fh) // self.stride + 1
-            output_width = (x.shape[3] + 2 * pad_y - fw) // self.stride + 1
-
-            col = self.im2col(x, (fh, fw), self.stride)
-            grad_output = (dense_grad * derivative).transpose(0, 2, 3, 1).reshape(batch_size * output_height * output_width, -1)
-            
-            grad_filters = grad_output.T.dot(col).reshape(filters.shape)
-
-            for f in range(filters.shape[0]):
-                self.filters[layer_idx][f] = self.optimizer.update(f"filter_{layer_idx}_{f}", self.filters[layer_idx][f], grad_filters[f])
+        ... #need to implement a new solution here
 
 
 
