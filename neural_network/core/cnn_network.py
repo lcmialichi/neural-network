@@ -65,7 +65,7 @@ class CnnNetwork(DenseNetwork):
           
             col = self.im2col(padded_input, (fh, fw), stride)
             filters_reshaped = filters.reshape(num_filters, -1).T
-
+            print(padded_input.shape, col.shape)
             conv_output = col @ filters_reshaped
 
             output_height = (padded_input.shape[2] - fh) // stride + 1
@@ -126,8 +126,36 @@ class CnnNetwork(DenseNetwork):
         return pad_x, pad_y
             
     def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
-        ... #need to implement a new solution here
-
+        batch_size, channels, height, width = x.shape
+        
+        dense_error = super().backward(
+            self.cached_convolutions[-1].reshape(batch_size, -1), y, output
+        )
+        
+        deltas = [dense_error.reshape(self.cached_convolutions[-1].shape).transpose(0, 3, 1, 2)]
+        
+        filters_grad = [np.zeros_like(filters) for filters in self.filters]
+        
+        for i in range(len(self.filters) - 1, -1, -1):
+            filters = self.filters[i]
+            num_filters, input_channels, fh, fw = filters.shape  
+            current_conv = self.cached_convolutions[i].transpose(0, 3, 1, 2)
+            
+            padded_error = self.add_padding(deltas[-1], fh, fw)
+            padded_input = self.add_padding(current_conv, fh, fw)
+            print(padded_error.shape)
+            exit()
+            col_input = self.im2col(padded_input, (fh, fw), self.stride)
+            col_error = self.im2col(padded_error, (fh, fw), self.stride)
+            filters_reshaped = filters.reshape(num_filters, -1)
+            print(col_error.shape, filters_reshaped.shape)
+            exit()
+            filters_grad[i] = col_input.T @ col_error
+            
+            deltas.append(np.dot(col_error, filters_reshaped.T))
+        
+        return deltas[0].dot(self.filters[0].T).reshape(x.shape)
+            
 
 
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
