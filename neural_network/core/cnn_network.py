@@ -98,13 +98,7 @@ class CnnNetwork(DenseNetwork):
 
 
     def add_padding(self, input: np.ndarray, filter_height: int, filter_width: int) -> np.ndarray:
-   
-        if self.padding_type == Padding.SAME: # for now only works with stride = 1
-            pad_x = (filter_height - 1) // 2
-            pad_y = (filter_width - 1) // 2
-        else:  # Padding VALID
-            pad_x, pad_y = 0, 0
-
+        pad_x, pad_y = self.get_padding(self.padding_type, filter_height, filter_width)
         return np.pad(
             input,
             ((0, 0), (0, 0), (pad_x, pad_x), (pad_y, pad_y)),
@@ -113,12 +107,14 @@ class CnnNetwork(DenseNetwork):
         )
     
     def get_padding(self, padding: Padding, filter_height: int, filter_width: int) -> tuple[int, int]:
-     
         _, input_height, input_width = self.input_shape
 
-        if padding == Padding.SAME:
+        if padding == Padding.SAME and self.stride > 1:
             pad_x = ((input_height - 1) * self.stride + filter_height - input_height) // 2
             pad_y = ((input_width - 1) * self.stride + filter_width - input_width) // 2
+        elif padding == Padding.SAME and self.stride == 1 :
+            pad_x = (filter_height - 1) // 2
+            pad_y = (filter_width - 1) // 2
         else:
             pad_x, pad_y = 0, 0
 
@@ -148,7 +144,8 @@ class CnnNetwork(DenseNetwork):
             for b in range(batch_size):
                 for k in range(input_channels):
                     for j in range(num_filters):
-                        padded_delta_b_j = np.pad(delta_conv[b, j], ((fh - 2, fh - 2), (fw - 2, fw - 2)), 'constant') # this is not a very dinamic reshape but works for now
+                        pad_h, pad_w = self.get_padding(self.padding_type, fh, fw)
+                        padded_delta_b_j = np.pad(delta_conv[b, j], ((pad_h, pad_h), (pad_w, pad_w)), 'constant')
                         delta_im2col = self.im2col(padded_delta_b_j.reshape(1, 1, *padded_delta_b_j.shape), (fh, fw), self.stride)
                         filter_reshaped = rotated_filters[j, k].reshape(-1, 1)
                         out = delta_im2col @ filter_reshaped
