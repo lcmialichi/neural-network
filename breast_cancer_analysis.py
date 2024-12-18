@@ -16,9 +16,9 @@ def main():
             .learning_rate(rate=0.0001)                   \
             .regularization_lambda(regularization=0.0001) \
             .dropout_rate(rate=0.3)                       \
+            .add_filter(filter_number=8)                  \
             .add_filter(filter_number=16)                 \
             .add_filter(filter_number=32)                 \
-            .add_filter(filter_number=64)                 \
             .stride(stride=1)                             \
             .with_activation(Relu())                      \
             .with_initializer(He())                       \

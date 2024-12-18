@@ -40,7 +40,7 @@ class CnnNetwork(DenseNetwork):
         output_width = (width - fw) // stride + 1
 
         col = np.zeros((batch, channels, fh, fw, output_height, output_width))
-
+     
         for y in range(fh):
             y_max = y + stride * output_height
             for x in range(fw):
@@ -54,7 +54,6 @@ class CnnNetwork(DenseNetwork):
     def convolve_im2col(self, input, filters_list: list, stride: int):
         output = input
         batch_size, channels, _, _ = output.shape
-        print("FOWARD ->")
         for filters in filters_list:
             num_filters, input_channels, fh, fw = filters.shape
 
@@ -134,27 +133,19 @@ class CnnNetwork(DenseNetwork):
 
             input_padded = self.add_padding(input_layer, fh, fw)
             input_reshaped = self.im2col(input_padded, (fh, fw), self.stride)
+
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
+
             grad_filter = (delta_reshaped.T @ input_reshaped).reshape(self.filters[i].shape)
             filter_gradients.append(grad_filter)
 
-            rotated_filters = np.rot90(self.filters[i], 2, axes=(2, 3))
-            new_delta_conv = np.zeros((batch_size, input_channels, input_layer.shape[2], input_layer.shape[3]))
+            filters_reshaped = self.filters[i].reshape(num_filters, -1)
+            rotated_filters = np.flip(filters_reshaped, axis=1)
+            
+            delta_col = delta_reshaped @ rotated_filters
 
-            for b in range(batch_size):
-                for k in range(input_channels):
-                    for j in range(num_filters):
-                        pad_h, pad_w = self.get_padding(self.padding_type, fh, fw)
-                        padded_delta_b_j = np.pad(delta_conv[b, j], ((pad_h, pad_h), (pad_w, pad_w)), 'constant')
-                        delta_im2col = self.im2col(padded_delta_b_j.reshape(1, 1, *padded_delta_b_j.shape), (fh, fw), self.stride)
-                        filter_reshaped = rotated_filters[j, k].reshape(-1, 1)
-                        out = delta_im2col @ filter_reshaped
-
-                        input_h_prev = input_layer.shape[2]
-                        input_w_prev = input_layer.shape[3] 
-                        new_delta_conv[b, k] += out.reshape(input_h_prev, input_w_prev) 
-
-            delta_conv = new_delta_conv     
+            delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
+            delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
 
         filter_gradients.reverse()
 
