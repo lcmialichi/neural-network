@@ -67,7 +67,6 @@ class CnnNetwork(DenseNetwork):
             col = self.im2col(padded_input, (fh, fw), stride)
             filters_reshaped = filters.reshape(num_filters, -1).T
             conv_output = col @ filters_reshaped
-            print(f"conv_output.shape:{conv_output.shape}\nfilters.shape: {filters.shape}\nfilters_reshaped.shape: {filters_reshaped.shape}\npadded_input.shape: {padded_input.shape}\ncol.shape: {col.shape}\n")
             
             output_height = (padded_input.shape[2] - fh) // stride + 1
             output_width = (padded_input.shape[3] - fw) // stride + 1
