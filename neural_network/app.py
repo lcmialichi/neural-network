@@ -9,10 +9,6 @@ class App:
         self.__model = model
         self.__board: Drawable = board
 
-    @staticmethod
-    def new_instance_with_model(model: BaseNetwork, board: Drawable)-> "App":
-        return App(board=board, model=model)
-    
     def draw(self) -> None:
         self.board().draw()
         

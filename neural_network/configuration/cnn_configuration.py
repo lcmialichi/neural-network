@@ -54,16 +54,26 @@ class CnnConfiguration:
 
     def add_filter(
         self, filter_number: int, 
-        filter_shape: tuple[int, int] = (3, 3), 
+        filter_shape: tuple[int, int] = (3, 3),
+        stride: int = 1,
         activation: Activation = Relu()
     ) -> "CnnConfiguration":
         self.config['filters'].append({
             'number': filter_number,
             'shape': filter_shape,
+            'stride': stride,
             'activation': activation
         })
 
         return self
+    
+    def add_polling(self, polling_shape: tuple[int, int] = (2, 2), stride: int = 1):
+        assert len(self.config['filters']) > 0
+        
+        self.config['filters'][-1]['polling'] = {
+            'shape': polling_shape,
+            'stride': stride
+        }
     
     def enable_optimazer(self) -> "CnnConfiguration":
         self.config['optimize'] = True

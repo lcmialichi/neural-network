@@ -69,7 +69,6 @@ class DenseNetwork(BaseNetwork):
         
         for i in range(len(self.weights)):
             input_activation = x if i == 0 else self.hidden_outputs[i - 1]
-
             grad_weight = input_activation.T.dot(deltas[i]) + self.regularization_lambda * self.weights[i]
             self.weights[i] = self.optimizer.update(f"weights_{i}", self.weights[i], grad_weight)
 
