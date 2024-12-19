@@ -87,7 +87,6 @@ class DenseNetwork(BaseNetwork):
         return output_batch
 
     def predict(self, x: Union[np.ndarray, np.ndarray]) -> np.ndarray:
-        self.is_training = False 
         if len(x.shape) == 1:
             x = x.reshape(1, -1) 
         return self.forward(x)
