@@ -4,8 +4,8 @@ from neural_network.core import Initialization
 from neural_network.core import Activation
 
 class CnnConfiguration:
-    def __init__(self):
-        self.config: dict = {}
+    def __init__(self, config: dict = {}):
+        self.config: dict = config
         self.config['hidden_layers'] = []
         self.config['filters'] = []
     

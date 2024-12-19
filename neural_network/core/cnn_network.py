@@ -25,12 +25,13 @@ class CnnNetwork(DenseNetwork):
         
         
     @staticmethod
-    def config()-> CnnConfiguration:
-        return CnnConfiguration()
+    def config(config: dict = {})-> CnnConfiguration:
+        return CnnConfiguration(config)
      
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.cached_convolutions = []
-        activated_output = self.activation.activate(self.convolve_im2col(x, self.filters, self.stride))
+        batch_normalized = self.batch_normalize(self.convolve_im2col(x, self.filters, self.stride, dropout))
+        activated_output = self.activation.activate(batch_normalized)
         return super().forward(activated_output.reshape(x.shape[0], -1), dropout)
 
     def im2col(self, image, filter_size, stride):
@@ -49,9 +50,7 @@ class CnnNetwork(DenseNetwork):
 
         return col.transpose(0, 4, 5, 1, 2, 3).reshape(batch * output_height * output_width, channels * fh * fw)
     
-
-
-    def convolve_im2col(self, input, filters_list: list, stride: int):
+    def convolve_im2col(self, input, filters_list: list, stride: int, apply_dropout: bool = False):
         output = input
         batch_size, channels, _, _ = output.shape
         for filters in filters_list:
@@ -70,9 +69,12 @@ class CnnNetwork(DenseNetwork):
             output_height = (padded_input.shape[2] - fh) // stride + 1
             output_width = (padded_input.shape[3] - fw) // stride + 1
 
-            conv_output = conv_output.reshape(batch_size,num_filters, output_height, output_width )
+            conv_output = conv_output.reshape(batch_size,num_filters, output_height, output_width)
+        
             self.cached_convolutions.append(conv_output)
-
+            if apply_dropout:
+                conv_output = self.apply_dropout(conv_output)
+                
             output = conv_output
             channels = num_filters 
             
@@ -95,6 +97,10 @@ class CnnNetwork(DenseNetwork):
 
         return channels * height * width
 
+    def batch_normalize(self, x: np.ndarray) -> np.ndarray:
+        mean = np.mean(x, axis=0, keepdims=True)
+        std = np.std(x, axis=0, keepdims=True) + 1e-8 
+        return (x - mean) / std
 
     def add_padding(self, input: np.ndarray, filter_height: int, filter_width: int) -> np.ndarray:
         pad_x, pad_y = self.get_padding(self.padding_type, filter_height, filter_width)
@@ -131,11 +137,13 @@ class CnnNetwork(DenseNetwork):
             num_filters, input_channels, fh, fw = self.filters[i].shape
             batch_size, _, output_h, output_w = delta_conv.shape
 
+            delta_conv *= self.activation.derivate(self.cached_convolutions[i])
+
             input_padded = self.add_padding(input_layer, fh, fw)
             input_reshaped = self.im2col(input_padded, (fh, fw), self.stride)
 
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
-
+            
             grad_filter = (delta_reshaped.T @ input_reshaped).reshape(self.filters[i].shape)
             filter_gradients.append(grad_filter)
 

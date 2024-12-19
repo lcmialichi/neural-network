@@ -8,21 +8,22 @@ from neural_network.core import Padding
 
 def main():
     
-    config = CnnNetwork.config()                          \
-            .input_shape(channels=3, height=50, width=50) \
-            .add_hidden_layer(size=128)                   \
-            .add_hidden_layer(size=128)                   \
-            .output_size(size=2)                          \
-            .learning_rate(rate=0.0001)                   \
-            .regularization_lambda(regularization=0.0001) \
-            .dropout_rate(rate=0.3)                       \
-            .add_filter(filter_number=8)                  \
-            .add_filter(filter_number=16)                 \
-            .add_filter(filter_number=32)                 \
-            .stride(stride=1)                             \
-            .with_activation(Relu())                      \
-            .with_initializer(He())                       \
-            .enable_optimazer()
+    config = CnnNetwork.config({
+        'input_shape': (3, 50, 50),
+        'output_size': 2,
+        'learning_rate': 0.0001,
+        'regularization_lambda': 0.0001,
+        'dropout_rate': 0.3,
+        'stride': 1,
+        'optimize': True
+    })    
+            
+    config.add_hidden_layer(size=128)                   
+    config.add_hidden_layer(size=128)                   
+    config.add_filter(filter_number=16, filter_shape=(2, 2))         
+    config.add_filter(filter_number=32, filter_shape=(3, 3))                 
+    config.with_activation(Relu())                      
+    config.with_initializer(He())                       
             
     model = CnnNetwork(config)
 
