@@ -50,7 +50,7 @@ class CnnNetwork(DenseNetwork):
         self.cached_convolutions.append(conv_output)
         
         if dropout:
-            conv_output = self.apply_dropout(conv_output)
+            conv_output = self._apply_dropout(conv_output)
         return conv_output
 
     def _calculate_input_size(self, input_shape: tuple[int, int, int], filters: list[dict]) -> int:

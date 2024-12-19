@@ -40,18 +40,17 @@ class DenseNetwork(BaseNetwork):
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.hidden_outputs = []
         output = x
-        
         for layer_idx in range(self.layers_number):
             activation: Activation = self.hidden_layers[layer_idx]['activation']
             output = activation.activate(np.dot(output, self.weights[layer_idx]) + self.biases[layer_idx])
             if dropout:
-                output = self.apply_dropout(output)
+                output = self._apply_dropout(output)
           
             self.hidden_outputs.append(output)
 
-        return self.softmax(np.dot(output, self.weights[-1]) + self.biases[-1])
+        return np.dot(output, self.weights[-1]) + self.biases[-1]
 
-    def apply_dropout(self, activations: np.ndarray) -> np.ndarray:
+    def _apply_dropout(self, activations: np.ndarray) -> np.ndarray:
         mask = np.random.default_rng(42).integers(0, 2, size=activations.shape)
         activations = activations * mask
         activations /= (1 - self.dropout_rate)
@@ -60,7 +59,6 @@ class DenseNetwork(BaseNetwork):
     def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
         output_error = output - y
         deltas = [output_error]
-
         for i in range(len(self.weights) - 1, 0, -1):
             layer_error = deltas[-1].dot(self.weights[i].T)
             activation: Activation = self.hidden_layers[i -1]['activation']
@@ -88,7 +86,7 @@ class DenseNetwork(BaseNetwork):
     def predict(self, x: Union[np.ndarray, np.ndarray]) -> np.ndarray:
         if len(x.shape) == 1:
             x = x.reshape(1, -1) 
-        return self.forward(x)
+        return self.softmax(self.forward(x))
     
     def get_trainer(self):
         return DenseTrainer(self)

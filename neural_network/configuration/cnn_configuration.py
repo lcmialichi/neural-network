@@ -21,10 +21,9 @@ class CnnConfiguration:
         self.config['input_shape'] = (channels, height, width)
         return self
     
-    def add_hidden_layer(self, size: int, activation: Activation = Relu(), resolution: Callable = None) -> "CnnConfiguration":
+    def add_hidden_layer(self, size: int, activation: Activation = Relu()) -> "CnnConfiguration":
         self.config['hidden_layers'].append({
             'size': size,
-            'resolution': resolution,
             'activation': activation
         })
         return self

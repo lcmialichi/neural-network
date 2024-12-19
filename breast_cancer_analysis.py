@@ -17,11 +17,11 @@ def main():
         'optimize': True
     })    
             
-    config.add_hidden_layer(size=128)                   
-    config.add_hidden_layer(size=128)                   
-    config.add_filter(filter_number=16, filter_shape=(2, 2), activation=Relu())         
-    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=Relu())                 
-    config.with_initializer(He())                       
+    config.with_initializer(He())              
+    config.add_hidden_layer(size=128, activation=Relu())                   
+    config.add_hidden_layer(size=128, activation=Relu())                   
+    config.add_filter(filter_number=16, filter_shape=(2, 2), activation=Relu())
+    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=Relu())
 
     app = App.new_instance_with_model(
         model=config.new_model(), board=FileInput(
