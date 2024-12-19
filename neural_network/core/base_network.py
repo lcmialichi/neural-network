@@ -34,9 +34,6 @@ class BaseNetwork(ABC):
     def get_output_size(self) -> int:
         return self.output_size
 
-    def set_activation(self, activation: Activation):
-        self.activation = activation
-        
     def softmax(self, z: np.ndarray) -> np.ndarray:
         exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))
         return exp_z / np.sum(exp_z, axis=1, keepdims=True)

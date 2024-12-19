@@ -3,12 +3,11 @@ from neural_network.core.dense_network import DenseNetwork
 from neural_network.initializations import Xavier
 from neural_network.train import CnnTrainer
 from neural_network.core.padding import Padding
-from neural_network.configuration.cnn_configuration import CnnConfiguration
 from neural_network.core import Initialization
+from neural_network.core import Activation
 
 class CnnNetwork(DenseNetwork):
-    def __init__(self, options: CnnConfiguration):
-        config = options.get_config()
+    def __init__(self, config: dict):
         initializer: Initialization = config.get('initializer', Xavier())
         
         self.filters_options = config.get('filters', [])
@@ -22,21 +21,20 @@ class CnnNetwork(DenseNetwork):
         self.cached_convolutions = []
         super().__init__(config, initializer=initializer)
     
-    @staticmethod
-    def config(config: dict = None) -> CnnConfiguration:
-        return CnnConfiguration(config or {})
     
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.cached_convolutions = []
         convoluted = self._apply_convolutions(x, dropout=dropout)
         batch_normalized = self._batch_normalize(convoluted)
-        activated_output = self.activation.activate(batch_normalized)
-        return super().forward(activated_output.reshape(x.shape[0], -1), dropout)
+        return super().forward(batch_normalized.reshape(x.shape[0], -1), dropout)
     
     def _apply_convolutions(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         output = x
-        for filters in self.filters:
+        for index, filters in enumerate(self.filters):
             output = self._apply_single_convolution(output, filters, dropout)
+            activation: Activation = self.filters_options[index]['activation']
+            
+            output = activation.activate(output)
         return output
     
     def _apply_single_convolution(self, input: np.ndarray, filters: np.ndarray, dropout: bool) -> np.ndarray:
@@ -113,11 +111,13 @@ class CnnNetwork(DenseNetwork):
         delta_conv = dense_deltas.reshape(self.cached_convolutions[-1].shape)
 
         for i in range(len(self.filters) - 1, -1, -1):
+            activation: Activation = self.filters_options[i]['activation']
+
             input_layer = x if i == 0 else self.cached_convolutions[i - 1]
             num_filters, input_channels, fh, fw = self.filters[i].shape
             batch_size, _, output_h, output_w = delta_conv.shape
 
-            delta_conv *= self.activation.derivate(self.cached_convolutions[i])
+            delta_conv *= activation.derivate(self.cached_convolutions[i])
 
             input_padded = self._add_padding(input_layer, (fh, fw))
             input_reshaped = self._im2col(input_padded, (fh, fw))

@@ -1,13 +1,18 @@
 from typing import Callable
 from neural_network.core.padding import Padding
 from neural_network.core import Initialization
+from neural_network.core.cnn_network import CnnNetwork
 from neural_network.core import Activation
+from neural_network.activations import Relu
 
 class CnnConfiguration:
     def __init__(self, config: dict = {}):
         self.config: dict = config
-        self.config['hidden_layers'] = []
-        self.config['filters'] = []
+        self.config['hidden_layers'] = self.config.get('hidden_layers', [])
+        self.config['filters'] = self.config.get('filters', [])
+    
+    def new_model(self) -> "CnnNetwork":
+        return CnnNetwork(self.get_config())
     
     def get_config(self) -> dict:
         return self.config
@@ -16,10 +21,11 @@ class CnnConfiguration:
         self.config['input_shape'] = (channels, height, width)
         return self
     
-    def add_hidden_layer(self, size: int, resolution: Callable = None) -> "CnnConfiguration":
+    def add_hidden_layer(self, size: int, activation: Activation = Relu(), resolution: Callable = None) -> "CnnConfiguration":
         self.config['hidden_layers'].append({
             'size': size,
-            'resolution': resolution
+            'resolution': resolution,
+            'activation': activation
         })
         return self
         
@@ -47,11 +53,17 @@ class CnnConfiguration:
         self.config['padding_type'] = padding
         return self
 
-    def add_filter(self, filter_number: int, filter_shape: tuple[int, int] = (3, 3)) -> "CnnConfiguration":
+    def add_filter(
+        self, filter_number: int, 
+        filter_shape: tuple[int, int] = (3, 3), 
+        activation: Activation = Relu()
+    ) -> "CnnConfiguration":
         self.config['filters'].append({
             'number': filter_number,
-            'shape': filter_shape
+            'shape': filter_shape,
+            'activation': activation
         })
+
         return self
     
     def enable_optimazer(self) -> "CnnConfiguration":
@@ -69,5 +81,7 @@ class CnnConfiguration:
     def with_activation(self, activation: Activation)-> "CnnConfiguration":
         self.config['activation'] = activation
         return self
+    
+    
     
     

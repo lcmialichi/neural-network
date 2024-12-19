@@ -1,5 +1,4 @@
 import numpy as np
-from neural_network.activations import Sigmoid
 from neural_network.core import Activation
 from typing import Union
 from neural_network.core import Initialization
@@ -32,8 +31,6 @@ class DenseNetwork(BaseNetwork):
        
         self.hidden_output: list = []
         self.hidden_activations: list = []
-        self.activation: Activation = Sigmoid()
-        
         if config.get('optimize', True):
             self.optimizer = Adam(
                 learning_rate=self.learning_rate
@@ -45,7 +42,8 @@ class DenseNetwork(BaseNetwork):
         output = x
         
         for layer_idx in range(self.layers_number):
-            output = self.activation.activate(np.dot(output, self.weights[layer_idx]) + self.biases[layer_idx])
+            activation: Activation = self.hidden_layers[layer_idx]['activation']
+            output = activation.activate(np.dot(output, self.weights[layer_idx]) + self.biases[layer_idx])
             if dropout:
                 output = self.apply_dropout(output)
           
@@ -65,7 +63,8 @@ class DenseNetwork(BaseNetwork):
 
         for i in range(len(self.weights) - 1, 0, -1):
             layer_error = deltas[-1].dot(self.weights[i].T)
-            layer_delta = layer_error * self.activation.derivate(self.hidden_outputs[i - 1])
+            activation: Activation = self.hidden_layers[i -1]['activation']
+            layer_delta = layer_error * activation.derivate(self.hidden_outputs[i - 1])
             deltas.append(layer_delta)
 
         deltas.reverse()

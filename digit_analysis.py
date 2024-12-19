@@ -22,7 +22,7 @@ def main():
             line_weight=7
         )
     )
-    app.model().set_activation(Relu())
+    
     app.board().set_handler(handler=app.predict_image)
     app.board().set_labels(path_json="./labels/number.json")
     app.draw()
