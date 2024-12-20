@@ -18,11 +18,10 @@ def main():
     })    
             
     config.with_initializer(He())              
-    config.add_hidden_layer(size=256, activation=Relu())
+    config.add_hidden_layer(size=128, activation=Relu())
     config.add_hidden_layer(size=128, activation=Relu())                   
     config.add_filter(filter_number=32, filter_shape=(3, 3), activation=Relu())
-    config.add_filter(filter_number=64, filter_shape=(3, 3), activation=Relu())
-    config.add_filter(filter_number=128, filter_shape=(3, 3), activation=Relu()).add_polling((2, 2))
+    config.add_filter(filter_number=64, filter_shape=(3, 3), activation=Relu()).add_polling()
     
     app = App(
         model=config.new_model(), 

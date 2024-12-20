@@ -20,13 +20,13 @@ class CnnNetwork(DenseNetwork):
         self.cached_convolutions = []
         self.cached_pooling_indexes = []
         super().__init__(config, initializer=initializer)
-    
+
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.cached_convolutions = []
         self.cached_pooling_indexes = []
         convoluted = self._apply_convolutions(x, dropout=dropout)
         return super().forward(convoluted.reshape(x.shape[0], -1), dropout)
-    
+
     def _apply_convolutions(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         output = x
         for index, filters in enumerate(self.filters):
@@ -34,27 +34,25 @@ class CnnNetwork(DenseNetwork):
             output = self._apply_single_convolution(output, filters)
             activation: Activation = options['activation']
             output = activation.activate(output)
-
             if options.get('polling', False):
                 output, indexes = self._apply_max_pooling(output, options['polling']['shape'], options['polling']['stride'])
                 self.cached_pooling_indexes.append(indexes)
-                
             self.cached_convolutions.append(output)
             if dropout:
                 output = self._apply_dropout(output)
-
         return output
-    
+
     def _apply_single_convolution(self, input: np.ndarray, filters: np.ndarray) -> np.ndarray:
         padded_input = self._add_padding(input, filters.shape[2:])
         col = self._im2col(padded_input, filters.shape[2:])
-        filters_reshaped = filters.reshape(filters.shape[0], -1).T
-        conv_output = col @ filters_reshaped
+        filters_reshaped = filters.reshape(filters.shape[0], -1)
+        
+        conv_output = np.einsum('ij,bj->bi', filters_reshaped, col)
         conv_output = self._batch_normalize(conv_output)
 
         output_height = (padded_input.shape[2] - filters.shape[2]) // self.stride + 1
         output_width = (padded_input.shape[3] - filters.shape[3]) // self.stride + 1
-        return  conv_output.reshape(input.shape[0], filters.shape[0], output_height, output_width)
+        return conv_output.reshape(input.shape[0], filters.shape[0], output_height, output_width)
 
     def _apply_max_pooling(self, input: np.ndarray, pooling_shape: tuple[int, int] = (2, 2), stride: int = 1) -> tuple[np.ndarray, np.ndarray]:
         batch_size, channels, height, width = input.shape
@@ -72,12 +70,10 @@ class CnnNetwork(DenseNetwork):
                 w_start, w_end = j * stride, j * stride + pool_width
                 
                 window = input[:, :, h_start:h_end, w_start:w_end]
-                
                 max_vals = np.max(window, axis=(2, 3))
                 max_idxs = np.argmax(window.reshape(batch_size, channels, -1), axis=2)
                 
                 pooled_output[:, :, i, j] = max_vals
-                
                 max_coords_h, max_coords_w = np.divmod(max_idxs, pool_width)
                 pooled_indexes[:, :, i, j, 0] = h_start + max_coords_h
                 pooled_indexes[:, :, i, j, 1] = w_start + max_coords_w
@@ -101,7 +97,6 @@ class CnnNetwork(DenseNetwork):
                         unpooled_grad[b, c, idx[0], idx[1]] = grad[b, c, h, w]
         
         return unpooled_grad
-
 
     def _calculate_input_size(self, input_shape: tuple[int, int, int], filters: list[dict]) -> int:
         channels, height, width = input_shape
@@ -148,25 +143,27 @@ class CnnNetwork(DenseNetwork):
     def _im2col(self, image: np.ndarray, filter_size: tuple[int, int]) -> np.ndarray:
         batch, channels, height, width = image.shape
         fh, fw = filter_size
-        output_height = (height - fh) // self.stride + 1
-        output_width = (width - fw) // self.stride + 1
-        
-        col = np.zeros((batch, channels, fh, fw, output_height, output_width))
-        for y in range(fh):
-            y_max = y + self.stride * output_height
-            for x in range(fw):
-                x_max = x + self.stride * output_width
-                col[:, :, y, x, :, :] = image[:, :, y:y_max:self.stride, x:x_max:self.stride]
-        
-        return col.transpose(0, 4, 5, 1, 2, 3).reshape(batch * output_height * output_width, -1)
-    
+        stride = self.stride
+
+        output_height = (height - fh) // stride + 1
+        output_width = (width - fw) // stride + 1
+
+        strides = image.strides
+        stride_batch, stride_channel, stride_height, stride_width = strides
+
+        cols = np.lib.stride_tricks.as_strided(
+            image,
+            shape=(batch, channels, output_height, output_width, fh, fw),
+            strides=(stride_batch, stride_channel, stride_height * stride, stride_width * stride, stride_height, stride_width)
+        )
+
+        cols = cols.reshape(batch * output_height * output_width, -1)
+        return cols
 
     def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
         filter_gradients = []
 
-        flattened_last_conv = self.cached_convolutions[-1].reshape(x.shape[0], -1)
-
-        dense_deltas = super().backward(flattened_last_conv, y, output)
+        dense_deltas = super().backward(self.cached_convolutions[-1].reshape(x.shape[0], -1), y, output)
         delta_conv = dense_deltas.reshape(self.cached_convolutions[-1].shape)
 
         for i in range(len(self.filters) - 1, -1, -1):
@@ -175,6 +172,7 @@ class CnnNetwork(DenseNetwork):
 
             input_layer = x if i == 0 else self.cached_convolutions[i - 1]
             num_filters, input_channels, fh, fw = self.filters[i].shape
+
             delta_conv *= activation.derivate(self.cached_convolutions[i])
 
             if 'polling' in options:
@@ -182,29 +180,25 @@ class CnnNetwork(DenseNetwork):
                 pooling_stride = options['polling']['stride']
                 pool_cache = self.cached_pooling_indexes.pop()
                 delta_conv = self._unpooling(delta_conv, pool_cache, pooling_shape, pooling_stride)
-           
+            
             batch_size, _, output_h, output_w = delta_conv.shape
-           
             input_padded = self._add_padding(input_layer, (fh, fw))
             input_reshaped = self._im2col(input_padded, (fh, fw))
 
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
-          
-            grad_filter = (delta_reshaped.T @ input_reshaped).reshape(self.filters[i].shape)
+            grad_filter = np.dot(delta_reshaped.T, input_reshaped).reshape(self.filters[i].shape)
             filter_gradients.append(grad_filter)
-           
-            delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
 
+            delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
 
         filter_gradients.reverse()
-
         for i in range(len(self.filters)):
             self.filters[i] = self.optimizer.update(f"filter_{i}", self.filters[i], filter_gradients[i])
 
         return dense_deltas
-    
+
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
         output_batch = self.forward(x_batch, dropout=True)
         self.backward(x_batch, y_batch, output_batch)

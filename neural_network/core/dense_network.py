@@ -17,6 +17,7 @@ class DenseNetwork(BaseNetwork):
         self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
         self.dropout_rate: float = config.get('dropout_rate', 0.2)
         self.layers_number: int = len(self.hidden_layers)
+        self.rng = np.random.default_rng(42)
     
         self.biases = initializer.generate_bias(
             self.hidden_layers,
@@ -51,7 +52,7 @@ class DenseNetwork(BaseNetwork):
         return np.dot(output, self.weights[-1]) + self.biases[-1]
 
     def _apply_dropout(self, activations: np.ndarray) -> np.ndarray:
-        mask = np.random.default_rng(42).integers(0, 2, size=activations.shape)
+        mask = self.rng.integers(0, 2, size=activations.shape)
         activations = activations * mask
         activations /= (1 - self.dropout_rate)
         return activations
