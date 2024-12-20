@@ -18,11 +18,12 @@ class CnnNetwork(DenseNetwork):
         self.filters = initializer.generate_filters(self.filters_options, self.input_shape[0])
         config['input_size'] = self._calculate_input_size(self.input_shape, self.filters_options)
         self.cached_convolutions = []
+        self.cached_pooling_indexes = []
         super().__init__(config, initializer=initializer)
-    
     
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.cached_convolutions = []
+        self.cached_pooling_indexes = []
         convoluted = self._apply_convolutions(x, dropout=dropout)
         return super().forward(convoluted.reshape(x.shape[0], -1), dropout)
     
@@ -35,10 +36,10 @@ class CnnNetwork(DenseNetwork):
             output = activation.activate(output)
 
             if options.get('polling', False):
-                output = self._apply_max_pooling(output, options['polling']['shape'], options['polling']['stride'])
-
+                output, indexes = self._apply_max_pooling(output, options['polling']['shape'], options['polling']['stride'])
+                self.cached_pooling_indexes.append(indexes)
+                
             self.cached_convolutions.append(output)
-
             if dropout:
                 output = self._apply_dropout(output)
 
@@ -55,7 +56,7 @@ class CnnNetwork(DenseNetwork):
         output_width = (padded_input.shape[3] - filters.shape[3]) // self.stride + 1
         return  conv_output.reshape(input.shape[0], filters.shape[0], output_height, output_width)
 
-    def _apply_max_pooling(self, input: np.ndarray, pooling_shape: tuple[int, int] = (2, 2), stride: int = 1) -> np.ndarray:
+    def _apply_max_pooling(self, input: np.ndarray, pooling_shape: tuple[int, int] = (2, 2), stride: int = 1) -> tuple[np.ndarray, np.ndarray]:
         batch_size, channels, height, width = input.shape
         pool_height, pool_width = pooling_shape
         
@@ -63,46 +64,44 @@ class CnnNetwork(DenseNetwork):
         output_width = (width - pool_width) // stride + 1
         
         pooled_output = np.zeros((batch_size, channels, output_height, output_width))
+        pooled_indexes = np.zeros((batch_size, channels, output_height, output_width, 2), dtype=int)
         
         for i in range(output_height):
             for j in range(output_width):
                 h_start, h_end = i * stride, i * stride + pool_height
                 w_start, w_end = j * stride, j * stride + pool_width
-                pooled_output[:, :, i, j] = np.max(input[:, :, h_start:h_end, w_start:w_end], axis=(2, 3))
-        
-        return pooled_output
-    
-    def _get_pooling_mask(self, conv_output: np.ndarray, pooling_shape: tuple[int, int], stride: int):
-        _, _, height, width = conv_output.shape
-        pool_height, pool_width = pooling_shape
-        mask = np.zeros_like(conv_output)
-
-        for i in range(0, height, stride):
-            for j in range(0, width, stride):
-                h_start, h_end = i, i + pool_height
-                w_start, w_end = j, j + pool_width
-                pooled_region = conv_output[:, :, h_start:h_end, w_start:w_end]
                 
-                if pooled_region.ndim != 4:
-                    raise ValueError(f"Expected pooled_region to have 4 dimensions, got {pooled_region.ndim}")
-                    
-                max_values = np.max(pooled_region, axis=(2, 3), keepdims=True)
-                mask[:, :, h_start:h_end, w_start:w_end] = (pooled_region == max_values)
+                window = input[:, :, h_start:h_end, w_start:w_end]
+                
+                max_vals = np.max(window, axis=(2, 3))
+                max_idxs = np.argmax(window.reshape(batch_size, channels, -1), axis=2)
+                
+                pooled_output[:, :, i, j] = max_vals
+                
+                max_coords_h, max_coords_w = np.divmod(max_idxs, pool_width)
+                pooled_indexes[:, :, i, j, 0] = h_start + max_coords_h
+                pooled_indexes[:, :, i, j, 1] = w_start + max_coords_w
         
-        return mask
+        return pooled_output, pooled_indexes
 
-    def _apply_pooling_mask(self, delta_conv: np.ndarray, mask: np.ndarray, pooling_shape: tuple[int, int], stride: int):
-        _, _, height, width = delta_conv.shape
-        pool_height, pool_width = pooling_shape
-        pooled_delta = np.zeros_like(delta_conv)
+    def _unpooling(self, grad, pool_cache, pool_shape: tuple[int, int], stride: int):
+        batch_size, channels, pooled_height, pooled_width = grad.shape
+        pool_height, pool_width = pool_shape
 
-        for i in range(0, height, stride):
-            for j in range(0, width, stride):
-                h_start, h_end = i, i + pool_height
-                w_start, w_end = j, j + pool_width
-                pooled_delta[:, :, h_start:h_end, w_start:w_end] = mask[:, :, h_start:h_end, w_start:w_end] * delta_conv[:, :, h_start:h_end, w_start:w_end]
+        original_height = pooled_height * stride + pool_height - stride
+        original_width = pooled_width * stride + pool_width - stride
+
+        unpooled_grad = np.zeros((batch_size, channels, original_height, original_width))
+
+        for b in range(batch_size):
+            for c in range(channels):
+                for h in range(pooled_height):
+                    for w in range(pooled_width):
+                        idx = pool_cache[b, c, h, w]
+                        unpooled_grad[b, c, idx[0], idx[1]] = grad[b, c, h, w]
         
-        return pooled_delta
+        return unpooled_grad
+
 
     def _calculate_input_size(self, input_shape: tuple[int, int, int], filters: list[dict]) -> int:
         channels, height, width = input_shape
@@ -176,30 +175,24 @@ class CnnNetwork(DenseNetwork):
 
             input_layer = x if i == 0 else self.cached_convolutions[i - 1]
             num_filters, input_channels, fh, fw = self.filters[i].shape
-            batch_size, _, output_h, output_w = delta_conv.shape
-
             delta_conv *= activation.derivate(self.cached_convolutions[i])
 
             if 'polling' in options:
                 pooling_shape = options['polling']['shape']
-                stride = options['polling']['stride']
-
-                mask = self._get_pooling_mask(self.cached_convolutions[i], pooling_shape, stride)
-                delta_conv = self._apply_pooling_mask(delta_conv, mask, pooling_shape, stride)
-               
-             
+                pooling_stride = options['polling']['stride']
+                pool_cache = self.cached_pooling_indexes.pop()
+                delta_conv = self._unpooling(delta_conv, pool_cache, pooling_shape, pooling_stride)
+           
+            batch_size, _, output_h, output_w = delta_conv.shape
            
             input_padded = self._add_padding(input_layer, (fh, fw))
             input_reshaped = self._im2col(input_padded, (fh, fw))
 
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
-            print(f"delta_conv.shape: {delta_conv.shape}")
-            print(f"delta_reshaped.shape: {delta_reshaped.shape}")
-            print(f"input_reshaped.shape: {input_reshaped.shape}")
-            exit()
+          
             grad_filter = (delta_reshaped.T @ input_reshaped).reshape(self.filters[i].shape)
             filter_gradients.append(grad_filter)
-
+           
             delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
 
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
