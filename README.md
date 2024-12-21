@@ -3,7 +3,7 @@
 This package contains an implementation of a convolutional neural network (CNN) designed to detect breast cancer in histopathology images. The library allows you to experiment with different configurations, including weight initialization techniques, activation functions, dropout, and hyperparameters, enabling customization to meet your specific needs. Additionally, the network is adaptable to other image classification problems.
 
 <p align="center">
-  <img src="img/Code_759jF7v1hl.gif" width="250" />
+  <img src="img/Code_759jF7v1hl.gif" width="400" />
 </p>
 
 ### Features
@@ -57,13 +57,13 @@ Below is an example of configuring the CNN:
 
 ```python
  config = CnnConfiguration({
-        'input_shape': (3, 50, 50),
+        'input_shape': (3, 50, 50), # (channels, height, width)
         'output_size': 2,
         'learning_rate': 0.0001,
         'regularization_lambda': 0.0001,
         'dropout_rate': 0.3,
         'stride': 1,
-        'optimize': True
+        'optimize': True # Using Adam´s optimizer
     })
     # He initialization with caching
     config.with_initializer(He(path="./data/cache/he.pkl"))
@@ -103,10 +103,16 @@ Max pooling is a down-sampling operation used in convolutional neural networks t
 Convolution is the core operation of a convolutional neural network, designed to detect patterns and features in images, such as edges, textures, and shapes. A convolutional layer applies filters (or kernels) to the input image to generate feature maps
 
 ### Training
-After configuring your network and downloading the dataset, you can train the model with the provided data. Training is done via the train method, and you can configure the number of epochs, batch size, and even the result plotting function:
+After configuring your network and downloading the dataset, you can train the model with the provided data. Training is done via the ``train_images`` method, and you can configure the number of epochs, batch size, and even the result plotting function:
 
 ```python
-app.train("mnist_train.csv", epochs=20, batch_size=32, plot=Chart().plot_activations)
+app.train_images(
+        base_dir="./data/breast-histopathology-images",
+        image_size=(50,50),
+        epochs=10,
+        batch_size=64,
+        plot=Chart(size=2).plot_activations
+    )
 ```
 
 ## Features

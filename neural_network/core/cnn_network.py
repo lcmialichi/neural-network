@@ -202,11 +202,8 @@ class CnnNetwork(DenseNetwork):
         self.backward(x_batch, y_batch, output_batch)
         
         if self.initializer.save_data():
-            self.initializer.store(
-                bias=self.biases,
-                filters=self.filters,
-                layers=self.weights
-            )
+            self.initializer.store(bias=self.biases, filters=self.filters, layers=self.weights)
+            
         return output_batch
     
     def predict(self, x) -> np.ndarray:

@@ -18,7 +18,7 @@ def main():
         'optimize': True
     })
     
-    config.with_initializer(He(path="./data/cache/he.pkl"))  
+    config.with_initializer(He(path="./data/cache/he.pkl"))
     config.padding_type(Padding.SAME)   
     config.add_hidden_layer(size=256, activation=LeakyRelu())
     config.add_hidden_layer(size=128, activation=LeakyRelu())               
