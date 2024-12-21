@@ -1,20 +1,18 @@
-# Breast Cancer and Digit Identifier through Neural Network
+# Breast Cancer Detection through Convolutional Neural Network
 
-This package contains an implementation of a neural network designed to recognize both digits drawn by the user and detect breast cancer in histopathology images. The library allows you to experiment with different weight initialization techniques, activation functions, dropout, and hyperparameters, enabling you to tailor the network to your needs. You can easily adapt it to other problems, such as image classification for various categories.
+This package contains an implementation of a convolutional neural network (CNN) designed to detect breast cancer in histopathology images. The library allows you to experiment with different configurations, including weight initialization techniques, activation functions, dropout, and hyperparameters, enabling customization to meet your specific needs. Additionally, the network is adaptable to other image classification problems.
 
-<div style="display:flex; justify-content: center; gap: 20px;">
-  <img src="img/mintty_HxflF9c7tT.gif" width="250"/>
-  <img src="img/Code_759jF7v1hl.gif" width="250"/>
-</div>
-
+<p align="center">
+  <img src="img/Code_759jF7v1hl.gif" width="250" />
+</p>
 
 ### Features
-- **Breast Cancer Detection**: Detect breast cancer using histopathology images
-- **Digit Recognition**: Identify digits drawn by the user.
-- **Customization**: Choose from various weight initializations and activation functions.
-- **Experimentation**: Adjust parameters like the number of hidden layers, network size, learning rate, and regularization.
-- **Versatility**: Adapt the network to recognize other patterns, such as images of cats and dogs.
-- **Training Insights**: Visualize the training progress with real-time graphs showing the loss and accuracy over epochs.
+- **Breast Cancer Detection**:  Analyze histopathology images to identify cancerous cells.
+- **Customization**: Configure the CNN with various weight initialization techniques, activation functions, and hyperparameters.
+- **Experimentation**: Fine-tune parameters such as hidden layer size, learning rate, dropout, and stride
+
+- **Versatility**:  Adapt the network to classify other image types and categories.
+- **Training Insights**: Visualize the training process with real-time graphs showing loss and accuracy across epochs
 
 ## Quick Start
 To quickly get started with the application, follow the steps below:
@@ -29,25 +27,19 @@ pip install -r requirements.txt
 ```
 
 ### Download the Dataset
-To train the model for ``Digit Recognition``, you will need the MNIST dataset in CSV format. Follow the steps below to download it:
- 1. Visit the [dataset MNIST in CSV on Kaggle](https://www.kaggle.com/datasets/oddrationale/mnist-in-csv).
- 2. Click the "Download" button to get the compressed file containing the dataset.
- 3. Extract the contents of the file and place the CSV files in the ``data/`` folder inside your project directory.
-
-Alternatively, to automate the process, run the following command to download the dataset directly to the ``data/`` folder (make sure you have the Kaggle library installed and configured):
+To train the model for breast cancer detection, download the histopathology image dataset from Kaggle:
 
 ```bash
 kaggle datasets download -d oddrationale/mnist-in-csv -p ./data
 ```
-
-For ``Breast Cancer Detection``, download the histopathology image dataset from Kaggle:  
+ histopathology image dataset from Kaggle:  
 1. Visit the [Breast Histopathology Images dataset on Kaggle.](https://www.kaggle.com/datasets/paultimothymooney/breast-histopathology-images/data)
 
 2. Click the "Download" button to get the images.
 3. Extract the dataset and place the images into the ``data/`` folder, ensuring that the images are organized according to the categories (e.g., malignant and benign).
 
 
-Alternatively, you can automate the download for the Breast Cancer dataset using the Kaggle API:
+Alternatively, you can automate the download for the dataset using the Kaggle API:
 
 ```bash
 kaggle datasets download -d paultimothymooney/breast-histopathology-images -p ./data
@@ -55,28 +47,32 @@ kaggle datasets download -d paultimothymooney/breast-histopathology-images -p ./
 Once the dataset is downloaded, you can proceed to train the model.
 
 ## Run the Application
-To run the application and start experimenting with the neural network, execute the command:
-
 ```bash
-python digit_analysis.py
+python main.py
 ```
-The application will start, and you can draw numbers on the panel for the neural network to predict which number was drawn. You can also train the network with new data!
+The application will allow you to train the model on the dataset and test it on new histopathology images.!
 
-## Customization
-You can customize various parameters, such as the number of hidden layers, the activation function, weight initialization, and more. Here's an example for quick adjustments:
+## Configuration Example
+Below is an example of configuring the CNN:
 
 ```python
-model = Neuron({
-    'input_size': 784, 
-    'hidden_size': 256, 
-    'output_size': 10, 
-    'layers_number': 4,
-    'learning_rate': 0.001,
-    'regularization_lambda': 0.0001,
-    'dropout_rate': 0.2  # Set dropout rate to 20%
-}, He())
-
-model.set_activation(Relu())
+ config = CnnConfiguration({
+        'input_shape': (3, 50, 50),
+        'output_size': 2,
+        'learning_rate': 0.0001,
+        'regularization_lambda': 0.0001,
+        'dropout_rate': 0.3,
+        'stride': 1,
+        'optimize': True
+    })
+    # He initialization with caching
+    config.with_initializer(He(path="./data/cache/he.pkl"))
+    # add padding to kernels
+    config.padding_type(Padding.SAME)
+    config.add_hidden_layer(size=256, activation=LeakyRelu())
+    config.add_hidden_layer(size=128, activation=LeakyRelu())               
+    config.add_filter(filter_number=8, filter_shape=(3, 3), activation=LeakyRelu())
+    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu())
 ```
 
 ### Initializations
@@ -97,6 +93,15 @@ The activation function is fundamental for introducing non-linearity into the ne
 ### Dropout
 Dropout is a regularization technique used to prevent overfitting by randomly "dropping" neurons during training. You can set a dropout rate (e.g., 0.2 means 20% of the neurons are dropped) in the model's configuration.
 
+### Optimizer
+The package uses Adam (Adaptive Moment Estimation) as the default optimizer for training the neural network. Adam combines the benefits of two popular optimizers: RMSProp and Stochastic Gradient Descent (SGD) with momentum. Its main advantages include adaptive learning rates for each parameter and faster convergence in practice.
+
+### Max pooling
+Max pooling is a down-sampling operation used in convolutional neural networks to reduce the spatial dimensions (width and height) of feature maps while retaining the most important information. The operation slides a window (e.g., 2x2) over the feature map and retains the maximum value within that window.
+
+### Convolution
+Convolution is the core operation of a convolutional neural network, designed to detect patterns and features in images, such as edges, textures, and shapes. A convolutional layer applies filters (or kernels) to the input image to generate feature maps
+
 ### Training
 After configuring your network and downloading the dataset, you can train the model with the provided data. Training is done via the train method, and you can configure the number of epochs, batch size, and even the result plotting function:
 
@@ -106,7 +111,6 @@ app.train("mnist_train.csv", epochs=20, batch_size=32, plot=Chart().plot_activat
 
 ## Features
 - **Breast Cancer Detection**: Analyze histopathology images to detect breast cancer.
-- **Digit Recognition**: Identify digits drawn by the user.
 - **Customization**: Choose from different initializations and activation functions.
 - **Experiments**: Adjust parameters like the number of hidden layers, network size, and learning rate.
 - **Versatility**: Adapt the network to recognize other patterns, such as images of cats and dogs.
