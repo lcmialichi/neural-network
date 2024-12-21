@@ -11,9 +11,9 @@ def main():
     config = CnnConfiguration({
         'input_shape': (3, 50, 50),
         'output_size': 2,
-        'learning_rate': 0.0001,
+        'learning_rate': 0.00005,
         'regularization_lambda': 0.0001,
-        'dropout_rate': 0.3,
+        'dropout_rate': 0.5,
         'stride': 1,
         'optimize': True
     })

@@ -186,6 +186,7 @@ class CnnNetwork(DenseNetwork):
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
             grad_filter = np.dot(delta_reshaped.T, input_reshaped).reshape(self.filters[i].shape)
             filter_gradients.append(grad_filter)
+            grad_filter += self.regularization_lambda * self.filters[i]
 
             delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
