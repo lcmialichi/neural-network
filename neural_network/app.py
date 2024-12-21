@@ -18,9 +18,6 @@ class App:
     def board(self) -> Drawable:
         return self.__board
     
-    def train_csv(self, data_file: str,  epochs: int =10, batch_size: int =32, plot: Union[None, Callable] = None ) -> None: 
-        self.__model.get_trainer().train(data_file, epochs, batch_size, plot)
-
     def train_images(self, base_dir, image_size=(50, 50), epochs: int = 10, batch_size=32, plot: Union[None, Callable] = None ) -> None: 
         self.__model.get_trainer().train(base_dir, image_size, epochs, batch_size, plot)
     

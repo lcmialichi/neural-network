@@ -13,7 +13,6 @@ class CnnNetwork(DenseNetwork):
         self.stride: int = config.get('stride', 1)
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
-        
         self.filters = self.initializer.generate_filters(self.filters_options, self.input_shape[0])
         config['input_size'] = self._calculate_input_size(self.input_shape, self.filters_options)
         self.cached_convolutions = []

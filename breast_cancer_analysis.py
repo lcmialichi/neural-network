@@ -18,12 +18,12 @@ def main():
         'optimize': True
     })
     
-    config.with_initializer(He())  
+    config.with_initializer(He(path="./data/cache/he.pkl"))  
     config.padding_type(Padding.SAME)   
     config.add_hidden_layer(size=256, activation=LeakyRelu())
     config.add_hidden_layer(size=128, activation=LeakyRelu())               
     config.add_filter(filter_number=8, filter_shape=(3, 3), activation=LeakyRelu())
-    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu()).add_polling(2,2)
+    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu())
     
     app = App(
         model=config.new_model(), 

@@ -2,15 +2,13 @@ from abc import ABC
 from typing import Union, List
 import numpy as np
 import pickle
+import os
 
 class Initialization(ABC):
     def __init__(self, path: Union[str, None] = None):
-        self._cache: bool = False
         self.data = {}
-
+        self._path = path
         if path:
-            self._cache = True
-            self._path = path
             try:
                 with open(path, 'rb') as f:
                     self.data = pickle.load(f)
@@ -22,7 +20,7 @@ class Initialization(ABC):
         return 1
 
     def generate_bias(self, layers: List[dict], output_size: int) -> List[np.ndarray]:
-        if self._cache and 'bias' in self.data:
+        if 'bias' in self.data:
             return self.data['bias']
         
         biases = [np.zeros(hidden_layer['size']) for hidden_layer in layers]
@@ -30,7 +28,7 @@ class Initialization(ABC):
         return biases
 
     def generate_filters(self, filters_list: List[dict], input_channels: int) -> List[np.ndarray]:
-        if self._cache and 'filters' in self.data:
+        if 'filters' in self.data:
             return self.data['filters']
 
         generator = np.random.default_rng(42)
@@ -52,6 +50,13 @@ class Initialization(ABC):
         return filters
 
     def store(self, bias: List[np.ndarray] = [], filters: List[np.ndarray] = [], layers: List[np.ndarray] = []) -> None:
+        if not self._path:
+            raise ValueError("Path not specified for storing data.")
+        
+        directory = os.path.dirname(self._path)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory)
+        
         data_to_store = {}
         if bias:
             data_to_store['bias'] = bias
@@ -65,4 +70,4 @@ class Initialization(ABC):
             
     
     def save_data(self) -> bool:
-        return self._cache
+        return self._path is not None

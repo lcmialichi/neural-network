@@ -4,8 +4,8 @@ import numpy as np
 class He(Initialization):
 
     def generate_layers(self, hidden_layers: list, input_size: int, output_size: int) -> list:
-        if self._cache and 'bias' in self.data:
-             return self.data['layers']
+        if 'bias' in self.data:
+            return self.data['layers']
         generator = np.random.default_rng(42)
         weights = []
 
