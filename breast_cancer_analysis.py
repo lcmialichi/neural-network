@@ -2,8 +2,9 @@ from neural_network.app import App
 from neural_network.board import Chart
 from neural_network.initializations import He
 from neural_network.configuration import CnnConfiguration
-from neural_network.activations import Relu
+from neural_network.activations import LeakyRelu
 from neural_network.board import FileInput
+from neural_network.core import Padding
 
 def main():
     
@@ -15,13 +16,14 @@ def main():
         'dropout_rate': 0.3,
         'stride': 1,
         'optimize': True
-    })    
-            
-    config.with_initializer(He())              
-    config.add_hidden_layer(size=128, activation=Relu())
-    config.add_hidden_layer(size=128, activation=Relu())                   
-    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=Relu())
-    config.add_filter(filter_number=64, filter_shape=(3, 3), activation=Relu()).add_polling()
+    })
+    
+    config.with_initializer(He())  
+    config.padding_type(Padding.SAME)   
+    config.add_hidden_layer(size=256, activation=LeakyRelu())
+    config.add_hidden_layer(size=128, activation=LeakyRelu())               
+    config.add_filter(filter_number=8, filter_shape=(3, 3), activation=LeakyRelu())
+    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu()).add_polling(2,2)
     
     app = App(
         model=config.new_model(), 
@@ -39,8 +41,8 @@ def main():
         base_dir="./data/breast-histopathology-images",
         image_size=(50,50),
         epochs=10,
-        batch_size=32,
-        plot=Chart(2).plot_activations
+        batch_size=64,
+        plot=Chart(size=2).plot_activations
     )
     
     app.loop()

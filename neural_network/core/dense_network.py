@@ -36,7 +36,6 @@ class DenseNetwork(BaseNetwork):
             self.optimizer = Adam(
                 learning_rate=self.learning_rate
                 )
-   
 
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.hidden_outputs = []

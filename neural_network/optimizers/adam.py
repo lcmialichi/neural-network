@@ -18,12 +18,12 @@ class Adam:
         self.t += 1
 
         self.m[param_name] = self.beta1 * self.m[param_name] + (1 - self.beta1) * grad
+
         self.v[param_name] = self.beta2 * self.v[param_name] + (1 - self.beta2) * (grad ** 2)
 
         m_hat = self.m[param_name] / (1 - self.beta1 ** self.t)
         v_hat = self.v[param_name] / (1 - self.beta2 ** self.t)
-
+        
         param_update = -self.lr * m_hat / (np.sqrt(v_hat) + self.epsilon)
 
-        param += param_update
-        return param
+        return param + param_update

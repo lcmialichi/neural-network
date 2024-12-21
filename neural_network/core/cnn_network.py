@@ -8,18 +8,17 @@ from neural_network.core import Activation
 
 class CnnNetwork(DenseNetwork):
     def __init__(self, config: dict):
-        initializer: Initialization = config.get('initializer', Xavier())
-        
+        self.initializer: Initialization = config.get('initializer', Xavier())
         self.filters_options = config.get('filters', [])
         self.stride: int = config.get('stride', 1)
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
         
-        self.filters = initializer.generate_filters(self.filters_options, self.input_shape[0])
+        self.filters = self.initializer.generate_filters(self.filters_options, self.input_shape[0])
         config['input_size'] = self._calculate_input_size(self.input_shape, self.filters_options)
         self.cached_convolutions = []
         self.cached_pooling_indexes = []
-        super().__init__(config, initializer=initializer)
+        super().__init__(config, initializer=self.initializer)
 
     def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
         self.cached_convolutions = []
@@ -88,16 +87,16 @@ class CnnNetwork(DenseNetwork):
         original_width = pooled_width * stride + pool_width - stride
 
         unpooled_grad = np.zeros((batch_size, channels, original_height, original_width))
+        pooled_indices = pool_cache.reshape(batch_size, channels, -1, 2)
 
         for b in range(batch_size):
             for c in range(channels):
-                for h in range(pooled_height):
-                    for w in range(pooled_width):
-                        idx = pool_cache[b, c, h, w]
-                        unpooled_grad[b, c, idx[0], idx[1]] = grad[b, c, h, w]
-        
-        return unpooled_grad
+                grad_values = grad[b, c].reshape(-1)
+                indices = pooled_indices[b, c].reshape(-1, 2)
+                unpooled_grad[b, c, indices[:, 0], indices[:, 1]] = grad_values
 
+        return unpooled_grad
+    
     def _calculate_input_size(self, input_shape: tuple[int, int, int], filters: list[dict]) -> int:
         channels, height, width = input_shape
         for filter_layer in filters:
@@ -202,10 +201,17 @@ class CnnNetwork(DenseNetwork):
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
         output_batch = self.forward(x_batch, dropout=True)
         self.backward(x_batch, y_batch, output_batch)
+        
+        if self.initializer.save_data():
+            self.initializer.store(
+                bias=self.biases,
+                filters=self.filters,
+                layers=self.weights
+            )
         return output_batch
     
     def predict(self, x) -> np.ndarray:
-        return self.forward(x)
+        return self.softmax(self.forward(x))
     
     def get_trainer(self):
         return CnnTrainer(self)

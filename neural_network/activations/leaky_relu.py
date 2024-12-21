@@ -6,4 +6,4 @@ class LeakyRelu(Activation):
         return np.where(x > 0, x, x * alpha)
 
     def derivate(self, x, alpha = 0.1):
-        return (x > 0).astype(float)
+        return np.where(x > 0, 1, alpha)
