@@ -11,19 +11,22 @@ def main():
     config = CnnConfiguration({
         'input_shape': (3, 50, 50),
         'output_size': 2,
-        'learning_rate': 0.00005,
+        'learning_rate': 0.0001,
         'regularization_lambda': 0.0001,
-        'dropout_rate': 0.5,
-        'stride': 1,
+        'dropout_rate': 0.3,
         'optimize': True
     })
     
-    config.with_initializer(He(path="./data/cache/he.pkl"))
-    config.padding_type(Padding.SAME)   
-    config.add_hidden_layer(size=256, activation=LeakyRelu())
-    config.add_hidden_layer(size=128, activation=LeakyRelu())               
-    config.add_filter(filter_number=8, filter_shape=(3, 3), activation=LeakyRelu())
-    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu())
+    config.with_initializer(He())
+    config.padding_type(Padding.SAME)
+    
+    config.add_hidden_layer(size=128, activation=LeakyRelu())
+    config.add_hidden_layer(size=256, activation=LeakyRelu())              
+    
+    config.add_filter(filter_number=8, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     
     app = App(
         model=config.new_model(), 
@@ -42,7 +45,7 @@ def main():
         image_size=(50,50),
         epochs=10,
         batch_size=64,
-        plot=Chart(size=2).plot_activations
+        # plot=Chart(size=2).plot_activations
     )
     
     app.loop()

@@ -47,7 +47,7 @@ class FileInput(Drawable):
     def get_image_as_matrix(self):
         image = Image.open(self.selected_file_path).convert('RGB')
         image = image.resize(self.image_size)
-        return np.transpose(image, (2, 0, 1))
+        return (np.transpose(image, (2, 0, 1)) / 255 - 0.5) / 0.5
     
     def draw(self):
         self.frame.pack(pady=20)
