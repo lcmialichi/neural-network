@@ -3,14 +3,12 @@ from neural_network.core import Activation
 import numpy as np
 
 class BaseNetwork(ABC):
-    def __init__(self, config: dict):
-        self.learning_rate = config.get('learning_rate', 0.01)
-        self.regularization_lambda = config.get('regularization_lambda', 0.01)
-        self.dropout_rate = config.get('dropout_rate', 0.2)
-        self.hidden_size: int = config.get('hidden_size', 128)
-        self.layers_number = config.get('layers_number', 2)
-        self.output_size = config.get('output_size', 10)
-
+    def set_training_mode(self) -> None:
+        self._mode = 'train'
+    
+    def set_test_mode(self) -> None:
+        self._mode = 'test'
+        
     @abstractmethod
     def forward(self, x: np.ndarray):
         pass

@@ -15,7 +15,7 @@ class DenseNetwork(BaseNetwork):
         self.output_size: int = config.get('output_size', 0)
         self.learning_rate: float = config.get('learning_rate', 0.01)
         self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
-        self.dropout_rate: float = config.get('dropout_rate', 0.2)
+        self.dropout_rate: float = config.get('dropout', 0.0)
         self.layers_number: int = len(self.hidden_layers)
         self.rng = np.random.default_rng(42)
     
@@ -37,18 +37,17 @@ class DenseNetwork(BaseNetwork):
                 learning_rate=self.learning_rate
                 )
 
-    def forward(self, x: np.ndarray, dropout: bool = False) -> np.ndarray:
+    def forward(self, x: np.ndarray) -> np.ndarray:
         self.hidden_outputs = []
         output = x
         for layer_idx in range(self.layers_number):
             activation: Activation = self.hidden_layers[layer_idx]['activation']
             output = activation.activate(np.dot(output, self.weights[layer_idx]) + self.biases[layer_idx])
-            if dropout:
+            if self._mode in 'train':
                 output = self._apply_dropout(output)
-          
-            self.hidden_outputs.append(output)
-
-        return np.dot(output, self.weights[-1]) + self.biases[-1]
+                self.hidden_outputs.append(output)
+                
+        return self.softmax(np.dot(output, self.weights[-1]) + self.biases[-1])
 
     def _apply_dropout(self, activations: np.ndarray) -> np.ndarray:
         mask = self.rng.integers(0, 2, size=activations.shape)
@@ -85,7 +84,7 @@ class DenseNetwork(BaseNetwork):
     def predict(self, x: Union[np.ndarray, np.ndarray]) -> np.ndarray:
         if len(x.shape) == 1:
             x = x.reshape(1, -1) 
-        return self.softmax(self.forward(x))
+        return self.forward(x)
     
     def get_trainer(self):
         return DenseTrainer(self)

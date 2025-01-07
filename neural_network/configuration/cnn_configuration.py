@@ -3,6 +3,7 @@ from neural_network.core import Initialization
 from neural_network.core.cnn_network import CnnNetwork
 from neural_network.core import Activation
 from neural_network.activations import Relu
+import numpy as np
 
 class CnnConfiguration:
     def __init__(self, config: dict = None):
@@ -46,10 +47,6 @@ class CnnConfiguration:
         self._config['dropout_rate'] = rate
         return self
     
-    def stride(self, stride: int) -> "CnnConfiguration":
-        self._config['stride'] = stride
-        return self
-         
     def padding_type(self, padding: Padding) -> "CnnConfiguration":
         self._config['padding_type'] = padding
         return self
@@ -67,6 +64,22 @@ class CnnConfiguration:
             'activation': activation
         })
 
+        return self
+    
+    def add_batch_normalization(self, gama: float = 1.0, beta: float = 0.0, momentum: float = 0.9 )-> "CnnConfiguration":
+        assert len(self._config['filters']) > 0
+        assert momentum > 0 and momentum < 1, "Momentum must be between 0 and 1"
+        
+        num_filters =  self._config['filters'][-1]['number']
+        
+        self._config['filters'][-1]['bn'] = {
+            'gamma': np.ones((1, num_filters, 1, 1)) * gama,
+            'beta': np.zeros((1, num_filters, 1, 1)) + beta,
+            'running_mean': np.zeros((1, num_filters, 1, 1)),
+            'running_var': np.ones((1, num_filters, 1, 1)),
+            'momentum': momentum 
+        }
+        
         return self
     
     def add_polling(self, polling_shape: tuple[int, int] = (2, 2), stride: int = 1):
@@ -92,6 +105,14 @@ class CnnConfiguration:
     def with_activation(self, activation: Activation)-> "CnnConfiguration":
         self._config['activation'] = activation
         return self
+    
+    def restore_initialization_cache(self):
+        if "initializer" in self._config:
+            self._config["initializer"].remove_cache()
+            
+    def with_no_cache(self):
+        if "initializer" in self._config:
+            self._config["initializer"].clear_cached_data()
     
     
     

@@ -22,7 +22,7 @@ class App:
         self.__model.get_trainer().train(base_dir, image_size, epochs, batch_size, plot)
     
     def predict_image(self, image: np.ndarray):
-        return np.argmax(self.model().predict(image))
+        return np.argmax(self.__model.predict(image))
     
     def loop(self) -> None:
         self.board().loop()
