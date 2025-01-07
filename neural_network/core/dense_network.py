@@ -50,9 +50,10 @@ class DenseNetwork(BaseNetwork):
         return self.softmax(np.dot(output, self.weights[-1]) + self.biases[-1])
 
     def _apply_dropout(self, activations: np.ndarray) -> np.ndarray:
-        mask = self.rng.integers(0, 2, size=activations.shape)
+        retain_prob = 1 - self.dropout_rate
+        mask = self.rng.random(size=activations.shape) < retain_prob
         activations = activations * mask
-        activations /= (1 - self.dropout_rate)
+        activations /= retain_prob
         return activations
 
     def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):

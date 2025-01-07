@@ -14,7 +14,7 @@ def create_configuration():
         'output_size': 2,
         'learning_rate': 0.0001,
         'regularization_lambda': 0.0001,
-        'dropout': 0.3,
+        'dropout': 0.5,
         'optimize': True
     })
     
