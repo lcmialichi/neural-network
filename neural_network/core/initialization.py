@@ -36,12 +36,19 @@ class Initialization(ABC):
         biases.append(np.zeros(output_size))
         return biases
     
+    def generate_kernel_bias(self, filters: List[np.ndarray]) -> List[np.ndarray]:
+        if 'kernel_bias' in self.data:
+            return self.data['kernel_bias']
+        
+        biases = [np.zeros(f.shape[0]) for f in filters]
+        return biases
+    
     def get_filters_options(self, filters_options: List[np.ndarray]) -> List[np.ndarray]:
         if 'filters_options' in self.data:
             return self.data['filters_options']
         
         return filters_options
-
+    
     def generate_filters(self, filters_list: List[dict], input_channels: int) -> List[np.ndarray]:
         if 'filters' in self.data:
             return self.data['filters']
@@ -88,8 +95,11 @@ class Initialization(ABC):
         if layers:
             data_to_store['layers'] = layers
             
-        with open(self._path, 'wb') as f:
-            pickle.dump(data_to_store, f)
+        try:
+            with open(self._path, 'wb') as f:
+                pickle.dump(data_to_store, f)
+        except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+            pass
             
     
     def save_data(self) -> bool:

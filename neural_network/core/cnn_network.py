@@ -18,7 +18,10 @@ class CnnNetwork(DenseNetwork):
         self.filters_options = self.initializer.get_filters_options(config.get('filters'))
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
+
         self.filters = self.initializer.generate_filters(self.filters_options, self.input_shape[0])
+        self.kernel_biases = self.initializer.generate_kernel_bias(self.filters)
+
         config['input_size'] = self._calculate_input_size(self.input_shape, self.filters_options)
         
         super().__init__(config, initializer=self.initializer)
@@ -35,6 +38,8 @@ class CnnNetwork(DenseNetwork):
         for index, filters in enumerate(self.filters):
             options: dict = self.filters_options[index]
             output = self._apply_single_convolution(output, filters, options['stride'])
+            output += self.kernel_biases[index][:, np.newaxis, np.newaxis]
+                                                
             if "bn" in options:
                 output = self._batch_normalize(output, options['bn'])
                 
@@ -43,7 +48,8 @@ class CnnNetwork(DenseNetwork):
             if 'polling' in options:
                 output, indexes = self._apply_max_pooling(output, options['polling']['shape'], options['polling']['stride'])
                 self.cached_pooling_indexes.append(indexes)
-                
+            
+            
             self.cached_convolutions.append(output)
             if self._mode in 'train':
                 output = self._apply_dropout(output)
@@ -60,6 +66,7 @@ class CnnNetwork(DenseNetwork):
         filters_reshaped = filters.reshape(filters.shape[0], -1)
         
         conv_output = np.einsum('ij,bj->bi', filters_reshaped, col)
+
         output_height, output_width = self._get_output_size(
             i_h, i_w, (filters.shape[2], filters.shape[3]), stride, padding
         )
@@ -155,7 +162,6 @@ class CnnNetwork(DenseNetwork):
 
         return int(output_height), int(output_width)
 
-
     def _batch_normalize(self, x: np.ndarray, bn_param: dict) -> np.ndarray:
         gamma, beta, momentum = bn_param['gamma'], bn_param['beta'], bn_param['momentum']
         running_mean, running_var = bn_param['running_mean'], bn_param['running_var']
@@ -249,6 +255,9 @@ class CnnNetwork(DenseNetwork):
             num_filters, input_channels, fh, fw = self.filters[i].shape
             conv = self.cached_convolutions[i]
             
+            grad_bias = np.sum(delta_conv, axis=(0, 2, 3))
+            self.kernel_biases[i] = self.optimizer.update(f"kernel_bias_{i}", self.kernel_biases[i], grad_bias)
+
             delta_conv *= activation.derivate(conv)
             padding = self._get_padding((input_layer.shape[2], input_layer.shape[3]), (fh, fw), options.get('stride'))
             
@@ -278,6 +287,7 @@ class CnnNetwork(DenseNetwork):
             delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
+        
           
         filter_gradients.reverse()
         for i in range(len(self.filters)):
