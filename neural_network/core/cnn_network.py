@@ -287,7 +287,6 @@ class CnnNetwork(DenseNetwork):
             delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
-        
           
         filter_gradients.reverse()
         for i in range(len(self.filters)):
@@ -295,7 +294,6 @@ class CnnNetwork(DenseNetwork):
 
         return dense_deltas
     
-
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
         output_batch = self.forward(x_batch)
         self.backward(x_batch, y_batch, output_batch)

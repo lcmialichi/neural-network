@@ -76,7 +76,8 @@ class Initialization(ABC):
         bias: List[np.ndarray] = [], 
         filters: List[np.ndarray] = [], 
         layers: List[np.ndarray] = [], 
-        filters_options: List[np.ndarray] = []
+        filters_options: List[np.ndarray] = [],
+        kernel_bias: List[np.ndarray] = [],
     ) -> None:
         if not self._path:
             raise ValueError("Path not specified for storing data.")
@@ -92,6 +93,8 @@ class Initialization(ABC):
             data_to_store['filters'] = filters
         if filters_options:
             data_to_store['filters_options'] = filters_options
+        if kernel_bias:
+            data_to_store['kernel_bias'] = filters_options
         if layers:
             data_to_store['layers'] = layers
             
