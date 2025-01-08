@@ -22,21 +22,21 @@ def create_configuration():
     config.padding_type(Padding.SAME)
     
     # first layer
-    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     
     # second layer
-    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     
     # third layer
-    config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=128, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
     
     # dense layers
     config.add_hidden_layer(size=128, activation=LeakyRelu())
     config.add_hidden_layer(size=256, activation=LeakyRelu())
-    config.add_hidden_layer(size=512, activation=LeakyRelu())
+    config.add_hidden_layer(size=128, activation=LeakyRelu())
     
     # output
     config.output(size=2, activation=Softmax())
