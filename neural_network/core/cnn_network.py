@@ -43,6 +43,7 @@ class CnnNetwork(DenseNetwork):
             if 'polling' in options:
                 output, indexes = self._apply_max_pooling(output, options['polling']['shape'], options['polling']['stride'])
                 self.cached_pooling_indexes.append(indexes)
+                
             self.cached_convolutions.append(output)
             if self._mode in 'train':
                 output = self._apply_dropout(output)
@@ -53,7 +54,7 @@ class CnnNetwork(DenseNetwork):
         _, _, i_h, i_w = input.shape
         padding = self._get_padding((i_h, i_w), (filters.shape[2], filters.shape[3]), stride)
         
-        padded_input = self._add_padding(input, filters.shape[2:], stride)
+        padded_input = self._add_padding(input, padding)
         col = self._im2col(padded_input, filters.shape[2:], stride)
         
         filters_reshaped = filters.reshape(filters.shape[0], -1)
@@ -91,21 +92,16 @@ class CnnNetwork(DenseNetwork):
         pooled_indexes = np.stack([row_indices, col_indices], axis=-1)
         return max_vals, pooled_indexes
 
-    def _unpooling(self, grad, pool_cache, pool_shape: tuple[int, int], stride: int):
-        batch_size, channels, pooled_height, pooled_width = grad.shape
-        pool_height, pool_width = pool_shape
-
-        original_height = (pooled_height - 1) * stride + pool_height
-        original_width = (pooled_width - 1) * stride + pool_width
-
-        unpooled_grad = np.zeros((batch_size, channels, original_height, original_width))
+    def _unpooling(self, grad, pool_cache, size: tuple[int, int]):
+        batch_size, channels, _, _ = grad.shape
+        unpooled_grad = np.zeros((batch_size, channels, size[0], size[1]))
         
         batch_indices, channel_indices = np.meshgrid(
             np.arange(batch_size), np.arange(channels), indexing="ij"
         )
         
-        row_indices = np.clip(pool_cache[..., 0], 0, original_height - 1)
-        col_indices = np.clip(pool_cache[..., 1], 0, original_width - 1)
+        row_indices = np.clip(pool_cache[..., 0], 0, size[0] - 1)
+        col_indices = np.clip(pool_cache[..., 1], 0, size[1] - 1)
 
         batch_indices = batch_indices[..., None, None]
         channel_indices = channel_indices[..., None, None]
@@ -113,6 +109,7 @@ class CnnNetwork(DenseNetwork):
         unpooled_grad[batch_indices, channel_indices, row_indices, col_indices] = grad
 
         return unpooled_grad
+
     
     def _calculate_input_size(self, input_shape: tuple[int, int, int], filters: list[dict]) -> int:
         channels, height, width = input_shape
@@ -194,11 +191,13 @@ class CnnNetwork(DenseNetwork):
 
         return dx, dgamma, dbeta
     
-    def _add_padding(self, input: np.ndarray, filter_shape: tuple[int, int], stride: int = 1) -> np.ndarray:
-        pad_x, pad_y = self._get_padding((input.shape[2], input.shape[3]), filter_shape, stride)
+    def _add_padding(self, 
+            input: np.ndarray, 
+            padding: tuple[int, int] = (0, 0)
+        ) -> np.ndarray:
         return np.pad(
             input,
-            ((0, 0), (0, 0), (pad_x, pad_x), (pad_y, pad_y)),
+            ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
             mode="constant",
             constant_values=0
         )
@@ -251,6 +250,11 @@ class CnnNetwork(DenseNetwork):
             conv = self.cached_convolutions[i]
             
             delta_conv *= activation.derivate(conv)
+            padding = self._get_padding((input_layer.shape[2], input_layer.shape[3]), (fh, fw), options.get('stride'))
+            
+            if 'polling' in options:
+                pool_cache = self.cached_pooling_indexes.pop()
+                delta_conv = self._unpooling(delta_conv, pool_cache, input_layer.shape[2:])
             
             if 'bn' in options:
                 delta_conv, dgamma, dbeta = self._batch_norm_backward(delta_conv, self.cached_bn.pop())
@@ -261,14 +265,9 @@ class CnnNetwork(DenseNetwork):
                     f"beta_{i}", options['bn']['beta'], dbeta
                 )
                 
-            if 'polling' in options:
-                pooling_shape = options['polling']['shape']
-                pooling_stride = options['polling']['stride']
-                pool_cache = self.cached_pooling_indexes.pop()
-                delta_conv = self._unpooling(delta_conv, pool_cache, pooling_shape, pooling_stride)
-            
             batch_size, _, output_h, output_w = delta_conv.shape
-            input_padded = self._add_padding(input_layer, (fh, fw), options.get('stride'))
+            
+            input_padded = self._add_padding(input_layer, padding)
             input_reshaped = self._im2col(input_padded, (fh, fw), options.get('stride'))
 
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)

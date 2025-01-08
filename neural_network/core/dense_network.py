@@ -78,7 +78,7 @@ class DenseNetwork(BaseNetwork):
         return deltas[0].dot(self.weights[0].T).reshape(x.shape)
 
     def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
-        output_batch = self.forward(x_batch, True)
+        output_batch = self.forward(x_batch)
         self.backward(x_batch, y_batch, output_batch)
         return output_batch
 

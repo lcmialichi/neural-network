@@ -14,7 +14,7 @@ def create_configuration():
         'output_size': 2,
         'learning_rate': 0.0001,
         'regularization_lambda': 0.0001,
-        'dropout': 0.5,
+        'dropout': 0.3,
         'optimize': True
     })
     
@@ -27,15 +27,16 @@ def create_configuration():
     
     # second layer
     config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_polling(polling_shape=(2, 2), stride=2)
     
     # third layer
     config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     config.add_batch_normalization()
     
     # dense layers
-    config.add_hidden_layer(size=64, activation=LeakyRelu())
     config.add_hidden_layer(size=128, activation=LeakyRelu())
     config.add_hidden_layer(size=256, activation=LeakyRelu())
+    config.add_hidden_layer(size=512, activation=LeakyRelu())
     
     return config
 
