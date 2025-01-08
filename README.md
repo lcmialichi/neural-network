@@ -30,7 +30,7 @@ pip install -r requirements.txt
 To train the model for breast cancer detection, download the histopathology image dataset from Kaggle:
 
 ```bash
-kaggle datasets download -d oddrationale/mnist-in-csv -p ./data
+kaggle datasets download -d paultimothymooney/breast-histopathology-images -p ./data
 ```
  histopathology image dataset from Kaggle:  
 1. Visit the [Breast Histopathology Images dataset on Kaggle.](https://www.kaggle.com/datasets/paultimothymooney/breast-histopathology-images/data)
@@ -39,18 +39,40 @@ kaggle datasets download -d oddrationale/mnist-in-csv -p ./data
 3. Extract the dataset and place the images into the ``data/`` folder, ensuring that the images are organized according to the categories (e.g., malignant and benign).
 
 
-Alternatively, you can automate the download for the dataset using the Kaggle API:
-
-```bash
-kaggle datasets download -d paultimothymooney/breast-histopathology-images -p ./data
-```
 Once the dataset is downloaded, you can proceed to train the model.
 
 ## Run the Application
 ```bash
 python main.py
 ```
+or
+
+```bash
+python main.py --mode test
+```
 The application will allow you to train the model on the dataset and test it on new histopathology images.!
+
+###  Command Line Arguments:
+
+**See all commands:**
+```bash
+python main.py --help
+```
+
+**Train model:**
+```bash
+python main.py --mode train
+```
+
+**Train model with new cache file:**
+```bash
+python main.py --mode train --clear-cache
+```
+
+**Train model with no cache update and a new initialization:**
+```bash
+python main.py --mode train --no-cache
+```
 
 ## Configuration Example
 Below is an example of configuring the CNN:
@@ -58,22 +80,36 @@ Below is an example of configuring the CNN:
 ```python
  config = CnnConfiguration({
         'input_shape': (3, 50, 50), # (channels, height, width)
-        'output_size': 2,
-        'learning_rate': 0.0001,
+        'learning_rate': 0.001,
         'regularization_lambda': 0.0001,
-        'dropout_rate': 0.3,
-        'stride': 1,
-        'optimize': True # Using Adam´s optimizer
+        'dropout': 0.2,
+        'optimize': True
     })
-    # He initialization with caching
-    config.with_initializer(He(path="./data/cache/he.pkl"))
-    # add padding to kernels
-    config.padding_type(Padding.SAME)
-    config.add_hidden_layer(size=256, activation=LeakyRelu())
-    config.add_hidden_layer(size=128, activation=LeakyRelu())               
-    config.add_filter(filter_number=8, filter_shape=(3, 3), activation=LeakyRelu())
-    config.add_filter(filter_number=16, filter_shape=(3, 3), activation=LeakyRelu())
+
+config.with_initializer(He(path="./data/cache/he.pkl"))
+config.padding_type(Padding.SAME)
+
+# first layer
+config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+config.add_polling(polling_shape=(2, 2), stride=2)
+
+# second layer
+config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+
+# third layer
+config.add_filter(filter_number=128, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+config.add_polling(polling_shape=(2, 2), stride=2)
+config.add_batch_normalization()
+
+# dense network layers
+config.add_hidden_layer(size=128, activation=LeakyRelu())
+config.add_hidden_layer(size=256, activation=LeakyRelu())
+config.add_hidden_layer(size=128, activation=LeakyRelu())
+
+# output layer
+config.output(size=2, activation=Softmax())
 ```
+
 
 ### Initializations
 Weight initialization is a crucial aspect for the efficiency of neural network training. The package offers several initialization options, including:

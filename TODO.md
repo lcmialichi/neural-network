@@ -6,7 +6,7 @@
 - [X] Create clear cache command
 - [X] Create no-cache command
 - [ ] Set dropout rate to multiple layers
-- [ ] Update readme file
+- [X] Update readme file
 - [ ] Add multiple optimizer
 - [ ] improve training options
 
