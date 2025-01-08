@@ -14,7 +14,7 @@ def create_configuration():
         'input_shape': (3, 50, 50),
         'learning_rate': 0.001,
         'regularization_lambda': 0.0001,
-        'dropout': 0.0,
+        'dropout': 0.2,
         'optimize': True
     })
     
@@ -58,7 +58,7 @@ def train_model(app: App):
         base_dir="./data/breast-histopathology-images",
         image_size=(50, 50),
         epochs=10,
-        batch_size=64
+        batch_size=32
     )
     
 def test_model(app: App):
