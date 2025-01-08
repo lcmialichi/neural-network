@@ -279,7 +279,6 @@ class CnnNetwork(DenseNetwork):
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
           
-
         filter_gradients.reverse()
         for i in range(len(self.filters)):
             self.filters[i] = self.optimizer.update(f"filter_{i}", self.filters[i], filter_gradients[i])

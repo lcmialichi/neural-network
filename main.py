@@ -7,14 +7,14 @@ from neural_network.configuration import CnnConfiguration
 from neural_network.activations import LeakyRelu
 from neural_network.board import FileInput
 from neural_network.core import Padding
+from neural_network.activations import Softmax
 
 def create_configuration():
     config = CnnConfiguration({
         'input_shape': (3, 50, 50),
-        'output_size': 2,
-        'learning_rate': 0.0001,
+        'learning_rate': 0.001,
         'regularization_lambda': 0.0001,
-        'dropout': 0.3,
+        'dropout': 0.1,
         'optimize': True
     })
     
@@ -27,16 +27,19 @@ def create_configuration():
     
     # second layer
     config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
-    config.add_polling(polling_shape=(2, 2), stride=2)
     
     # third layer
     config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
     
     # dense layers
     config.add_hidden_layer(size=128, activation=LeakyRelu())
     config.add_hidden_layer(size=256, activation=LeakyRelu())
     config.add_hidden_layer(size=512, activation=LeakyRelu())
+    
+    # output
+    config.output(size=2, activation=Softmax())
     
     return config
 

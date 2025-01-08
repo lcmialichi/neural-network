@@ -9,3 +9,11 @@ class Activation(ABC):
     @abstractmethod
     def derivate(self, x, alpha = None):
         pass
+    
+    @abstractmethod
+    def loss(self, x, alpha = None):
+        pass
+    
+    @abstractmethod
+    def accuracy(self, x, alpha = None):
+        pass

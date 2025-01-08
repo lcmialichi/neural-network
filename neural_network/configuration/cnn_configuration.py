@@ -3,6 +3,7 @@ from neural_network.core import Initialization
 from neural_network.core.cnn_network import CnnNetwork
 from neural_network.core import Activation
 from neural_network.activations import Relu
+from neural_network.activations import Softmax
 import numpy as np
 
 class CnnConfiguration:
@@ -29,6 +30,13 @@ class CnnConfiguration:
             'size': size,
             'activation': activation
         })
+        return self
+    
+    def output(self, size: int, activation: Activation = Softmax()):
+        self._config['output'] = {
+            'size': size,
+            'activation': activation
+        }
         return self
         
     def output_size(self, size: int) -> "CnnConfiguration":

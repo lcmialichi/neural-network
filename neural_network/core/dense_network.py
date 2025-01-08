@@ -12,7 +12,7 @@ class DenseNetwork(BaseNetwork):
         self.optimizer = None
         self.input_size: int = config.get('input_size', 0)
         self.hidden_layers: int = config.get('hidden_layers', [])
-        self.output_size: int = config.get('output_size', 0)
+        self.output: dict = config.get('output')
         self.learning_rate: float = config.get('learning_rate', 0.01)
         self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
         self.dropout_rate: float = config.get('dropout', 0.0)
@@ -21,17 +21,19 @@ class DenseNetwork(BaseNetwork):
     
         self.biases = initializer.generate_bias(
             self.hidden_layers,
-            self.output_size
+            self.output.get('size')
         )
         
         self.weights = initializer.generate_layers(
             self.hidden_layers,
             self.input_size, 
-            self.output_size
+            self.output.get('size')
+
         )
        
         self.hidden_output: list = []
         self.hidden_activations: list = []
+        
         if config.get('optimize', True):
             self.optimizer = Adam(
                 learning_rate=self.learning_rate
@@ -46,8 +48,9 @@ class DenseNetwork(BaseNetwork):
             if self._mode in 'train':
                 output = self._apply_dropout(output)
                 self.hidden_outputs.append(output)
-                
-        return self.softmax(np.dot(output, self.weights[-1]) + self.biases[-1])
+        
+        activation: Activation = self.output.get('activation')
+        return activation.activate(np.dot(output, self.weights[-1]) + self.biases[-1])
 
     def _apply_dropout(self, activations: np.ndarray) -> np.ndarray:
         retain_prob = 1 - self.dropout_rate

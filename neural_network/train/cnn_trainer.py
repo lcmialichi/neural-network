@@ -9,8 +9,8 @@ class CnnTrainer(BaseTrainer):
         for epoch in range(epochs):
             for batch_data, batch_labels in image_processor.process_images():
                 output = self._model.train(x_batch=batch_data / 255.00, y_batch=batch_labels)
-                loss = self.compute_loss(output, batch_labels)
-                accuracy = self.compute_accuracy(output, batch_labels)
+                loss = self._model.get_output_loss(output, batch_labels)
+                accuracy = self._model.get_output_accuracy(output, batch_labels)
                 if plot is not None:
                     plot(output, epoch, batch_labels, loss, accuracy)
                 else:

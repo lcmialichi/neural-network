@@ -30,11 +30,13 @@ class BaseNetwork(ABC):
         pass
     
     def get_output_size(self) -> int:
-        return self.output_size
+        return self.output.get('size')
 
-    def softmax(self, z: np.ndarray) -> np.ndarray:
-        exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))
-        return exp_z / np.sum(exp_z, axis=1, keepdims=True)
+    def get_output_loss(self, x: np.ndarray, z: np.ndarray) -> np.ndarray:
+        return self.output.get('activation').loss(x, z)
+    
+    def get_output_accuracy(self, x: np.ndarray, z: np.ndarray):
+        return self.output.get('activation').accuracy(x, z)
     
     def apply_dropout(self, activations: np.ndarray) -> np.ndarray:
         mask = np.random.binomial(1, 1 - self.dropout_rate, size=activations.shape)
