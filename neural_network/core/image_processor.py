@@ -5,16 +5,21 @@ import numpy as np
 from typing import Tuple, Generator
 
 class ImageProcessor:
-    def __init__(self, base_dir: str, image_size: Tuple[int, int] = (64, 64), batch_size: int = 32):
+    def __init__(self, base_dir: str, image_size: Tuple[int, int] = (64, 64), batch_size: int = 32, rotation_range: int = 30):
         self.base_dir = base_dir
         self.image_size = image_size
         self.batch_size = batch_size
+        self.rotation_range = rotation_range
 
     def _load_image(self, image_path: str) -> np.ndarray:
         try:
             image = Image.open(image_path).convert('RGB')
+            
+            angle = random.uniform(-self.rotation_range, self.rotation_range)
+            image = image.rotate(angle)
+
             img_data = np.array(image.resize(self.image_size))
-            img_data = np.transpose(img_data, (2, 0, 1)) 
+            img_data = np.transpose(img_data, (2, 0, 1))
             return img_data
         except Exception as e:
             raise SystemError(f"Não foi possível processar a imagem {image_path}: {e}")
@@ -39,33 +44,27 @@ class ImageProcessor:
         if num_classes == 0:
             raise ValueError(f"Nenhuma classe encontrada em {sample_folder}")
 
-        class_indices = {label: 0 for label in class_paths}
-        while any(idx < len(images) for idx, images in zip(class_indices.values(), class_paths.values())):
-            batch_data = []
-            batch_labels = []
+        class_data = [(label, images) for label, images in class_paths.items()]
+        random.shuffle(class_data)
 
-            for label, images in class_paths.items():
-                start_idx = class_indices[label]
-                end_idx = start_idx + (self.batch_size // num_classes)
+        all_images = []
+        for label, images in class_data:
+            all_images.extend([(img, label) for img in images])
+        
+        random.shuffle(all_images)
 
-                batch_class_data = images[start_idx:end_idx]
+        batch_data = []
+        batch_labels = []
+        
+        for img, label in all_images:
+            batch_data.append(img)
+            batch_labels.append(np.eye(num_classes)[label])
+            
+            if len(batch_data) == self.batch_size:
+                yield np.array(batch_data), np.array(batch_labels)
+                batch_data, batch_labels = [], []
 
-                if len(batch_class_data) < (self.batch_size // num_classes):
-                    batch_class_data += random.choices(
-                        images,
-                        k=(self.batch_size // num_classes - len(batch_class_data))
-                    )
-
-                batch_class_labels = [np.eye(num_classes)[label]] * len(batch_class_data)
-                batch_data.extend(batch_class_data)
-                batch_labels.extend(batch_class_labels)
-
-                class_indices[label] += (self.batch_size // num_classes)
-
-            combined = list(zip(batch_data, batch_labels))
-            random.shuffle(combined)
-            batch_data, batch_labels = zip(*combined)
-
+        if batch_data:
             yield np.array(batch_data), np.array(batch_labels)
 
     def _process_directory(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:

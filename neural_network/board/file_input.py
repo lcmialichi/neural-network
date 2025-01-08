@@ -8,12 +8,8 @@ import os
 
 class FileInput(Drawable):
     def __init__(self, title: str, img_resize: Tuple[int, int] = (50,50)):
-        root = tk.Tk()
-        root.title(title)
-
-        self.image_size = img_resize
-        self.root: tk.Tk = root
-        self.frame = tk.Frame(root)
+        self.title = title
+        self.image_size = img_resize        
         
     def upload_image(self):
         file_path = filedialog.askopenfilename(
@@ -52,6 +48,9 @@ class FileInput(Drawable):
         return np.transpose(image, (2, 0, 1))
     
     def draw(self):
+        self.root = tk.Tk()
+        self.root.title(self.title)
+        self.frame = tk.Frame(self.root)
         self.frame.pack(pady=20)
 
         self.upload_button = tk.Button(self.frame, text="Escolher Imagem", command=self.upload_image)

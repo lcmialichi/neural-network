@@ -74,6 +74,11 @@ python main.py --mode train --clear-cache
 python main.py --mode train --no-cache
 ```
 
+**Shows training statistics as a plot:**
+```bash
+python main.py --mode train --plot
+```
+
 ## Configuration Example
 Below is an example of configuring the CNN:
 

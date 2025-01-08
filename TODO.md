@@ -5,10 +5,12 @@
 - [X] Create cached weights, kernels, biases, etc.
 - [X] Create clear cache command
 - [X] Create no-cache command
+- [X] Create plot command
 - [ ] Set dropout rate to multiple layers
 - [X] Update readme file
+- [X] Fix loss and accuracy plot
 - [ ] Add multiple optimizer
-- [ ] improve training options
+- [X] improve training options
 
 ### Dense Network
 - [X] Create loss and accuracy for each activation defined by the user

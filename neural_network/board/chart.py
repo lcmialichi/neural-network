@@ -1,33 +1,40 @@
 import matplotlib.pyplot as plt
-import numpy as np
 
 class Chart:
-    def __init__(self, size: int = 10):
-        self.__accurace = 0
-        self.__size = size
+    def __init__(self):
+        self.iterations = []
+        self.loss_values = []
+        self.accuracy_values = []
 
-    def plot_activations(self, activation, epoch, true_value, loss, accuracy):
-        plt.clf()
-        plt.subplot(1, 1, 1)
-        for i in range(len(true_value)):
-            predicted_index = np.argmax(activation[i])
-            true_index = np.argmax(true_value[i])
-            color = 'red'
-            if predicted_index == true_index:
-                color = 'green'
-                self.__accurace += 1
-               
-            plt.plot(predicted_index, i, 'o', color=color, markersize=10, label="Previsão" if i == 0 else "")
-
-        plt.title(f'Epoch {epoch + 1} - Loss: {loss:.4f} - Accuracy: {accuracy:.4f}')
+        plt.ion()
+        plt.style.use('ggplot')
+        self.fig, self.ax1 = plt.subplots(figsize=(8, 6))
         
-        plt.ylabel('Ativação')
-        plt.xlabel(f'Índice do Neurônio (0-{self.__size})')
-        plt.xticks(np.arange(self.__size))
-        plt.yticks([])
+        self.ax2 = self.ax1.twinx()
 
-        plt.legend(loc="best")
-        plt.tight_layout()
+        self.loss_line, = self.ax1.plot([], [], label='Loss', color='red', linewidth=1.5)
+        self.accuracy_line, = self.ax2.plot([], [], label='Accuracy (%)', color='green', linewidth=1.5)
 
-        plt.draw()
-        plt.pause(0.1)
+        self.ax1.set_xlabel('Iterations', fontsize=12)
+        self.ax1.set_ylabel('Loss', fontsize=12, color='red')
+        self.ax2.set_ylabel('Accuracy (%)', fontsize=12, color='green')
+        self.ax1.grid(True, linestyle='--', alpha=0.6)
+
+        self.fig.legend(loc='upper center', bbox_to_anchor=(0.5, 1), ncol=2, frameon=False, fontsize=10)
+
+    def plot_metrics(self, epoch, iteration, loss, accuracy):
+        self.iterations.append(iteration)
+        self.loss_values.append(loss)
+        self.accuracy_values.append(accuracy * 100)
+
+        self.loss_line.set_data(self.iterations, self.loss_values)
+        self.accuracy_line.set_data(self.iterations, self.accuracy_values)
+
+        self.ax1.set_xlim(0, max(self.iterations))
+        self.ax1.set_ylim(0, max(self.loss_values) + 0.5)
+        self.ax2.set_ylim(0, 100)
+
+        self.ax1.set_title(f'Training Metrics (Epoch {epoch + 1})', fontsize=14, weight='bold', pad=20)
+
+        self.fig.canvas.draw()
+        self.fig.canvas.flush_events()

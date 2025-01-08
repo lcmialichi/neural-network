@@ -13,7 +13,7 @@ def create_configuration():
     config = CnnConfiguration({
         'input_shape': (3, 50, 50),
         'learning_rate': 0.001,
-        'regularization_lambda': 0.0001,
+        'regularization_lambda': 0.001,
         'dropout': 0.2,
         'optimize': True
     })
@@ -24,17 +24,23 @@ def create_configuration():
     # first layer
     config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
-    
+    config.add_batch_normalization()
+
     # second layer
     config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
-    
+    config.add_batch_normalization()
+
     # third layer
     config.add_filter(filter_number=128, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
-    
+
+    # fourth layer
+    config.add_filter(filter_number=256, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_batch_normalization()
+
     # dense layers
-    config.add_hidden_layer(size=128, activation=LeakyRelu())
+    config.add_hidden_layer(size=512, activation=LeakyRelu())
     config.add_hidden_layer(size=256, activation=LeakyRelu())
     config.add_hidden_layer(size=128, activation=LeakyRelu())
     
@@ -52,13 +58,14 @@ def create_app(config: CnnConfiguration) -> App:
         )
     )
 
-def train_model(app: App):
+def train_model(app: App, plot:bool):
     app.model().set_training_mode()
     app.train_images(
         base_dir="./data/breast-histopathology-images",
         image_size=(50, 50),
         epochs=10,
-        batch_size=32
+        batch_size=32,
+        plot= Chart().plot_metrics if plot else None
     )
     
 def test_model(app: App):
@@ -75,19 +82,16 @@ def main():
     args = commands.get_args()
     config = create_configuration()
     
-    if args.clear_cache:
-        config.restore_initialization_cache()
-    
-    if args.no_cache:
-        config.with_no_cache()
-    
+    if args.clear_cache: config.restore_initialization_cache()
+    if args.no_cache: config.with_no_cache() 
+
     app = create_app(config)
     
     if args.mode == "train":
-        train_model(app)
+        train_model(app, args.plot)
+
     elif args.mode == "test":
         test_model(app)
     
-
 if __name__ == "__main__":
     main()

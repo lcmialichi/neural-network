@@ -23,6 +23,13 @@ class Commands:
             action="store_true",
             help="Uses new weights and restores the defined configurations."
         )
+
+        self.parser.add_argument(
+            "--plot", 
+            action="store_true",
+            default=False,
+            help="Plot loss and accuracy into graphics during the model training."
+        )
         
     def get_args(self):
         return self.parser.parse_args()
