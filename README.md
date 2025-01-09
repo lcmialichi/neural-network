@@ -48,9 +48,9 @@ python main.py
 or
 
 ```bash
-python main.py --mode test
+python main.py --mode validate
 ```
-The application will allow you to train the model on the dataset and test it on new histopathology images.!
+The application will run with an input file for model prediction.
 
 ###  Command Line Arguments:
 
@@ -79,11 +79,16 @@ python main.py --mode train --no-cache
 python main.py --mode train --plot
 ```
 
+**Test model**
+```bash
+python main.py --mode test --plot
+```
+
 ## Configuration Example
 Below is an example of configuring the CNN:
 
 ```python
- config = CnnConfiguration({
+config = CnnConfiguration({
         'input_shape': (3, 50, 50), # (channels, height, width)
         'learning_rate': 0.001,
         'regularization_lambda': 0.0001,
