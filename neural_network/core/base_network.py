@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from neural_network.core import Activation
+from neural_network.train.base_trainer import BaseTrainer
+from neural_network.core.processor import Processor
+from neural_network.core.tester import Tester
 import numpy as np
 
 class BaseNetwork(ABC):
@@ -24,11 +26,20 @@ class BaseNetwork(ABC):
     @abstractmethod
     def predict(self, x: np.ndarray):
         pass
+
+    def get_processor(self) -> "Processor": 
+        return self._processor
+    
+    def set_processor(self, processor: Processor) -> None: 
+        self._processor = processor
     
     @abstractmethod
-    def get_trainer(self):
+    def get_trainer(self) -> "BaseTrainer":
         pass
-    
+
+    def get_tester(self) -> Tester:
+        return Tester(self, self.get_processor())
+
     def get_output_size(self) -> int:
         return self.output.get('size')
 

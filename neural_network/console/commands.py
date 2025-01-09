@@ -7,9 +7,9 @@ class Commands:
     def register(self):
         self.parser.add_argument(
             "--mode", 
-            choices=["train", "test"], 
-            default="test",
-            help="Choose 'train' to train the model or 'test' to test the model."
+            choices=["train", "validate", "test"], 
+            default="validate",
+            help="Choose between 'train', 'validate' or 'test'."
         )
         
         self.parser.add_argument(

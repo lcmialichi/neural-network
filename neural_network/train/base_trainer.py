@@ -3,9 +3,13 @@ import numpy as np
 from typing import Callable, Union
 
 class BaseTrainer(ABC):
-    def __init__(self, model):
+    def __init__(self, model, processor):
         self._model = model
+        self._processor = processor
 
     @abstractmethod
-    def train(self, data_source, epochs: int, batch_size: int, plot: Union[None, Callable] = None):
+    def train(self,
+            epochs: int = 10, 
+            plot: Union[None, Callable] = None,
+            ):
         pass

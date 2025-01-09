@@ -4,6 +4,7 @@ from neural_network.core.cnn_network import CnnNetwork
 from neural_network.core import Activation
 from neural_network.activations import Relu
 from neural_network.activations import Softmax
+from neural_network.core.processor import Processor
 import numpy as np
 
 class CnnConfiguration:
@@ -122,6 +123,8 @@ class CnnConfiguration:
         if "initializer" in self._config:
             self._config["initializer"].clear_cached_data()
     
+    def set_processor(self, processor: Processor):
+        self._config['processor'] = processor
     
     
     

@@ -2,64 +2,91 @@ import os
 import random
 from PIL import Image
 import numpy as np
-from typing import Tuple, Generator
+from typing import Tuple, List, Generator
+from neural_network.core.processor import Processor
 
-class ImageProcessor:
-    def __init__(self, base_dir: str, image_size: Tuple[int, int] = (64, 64), batch_size: int = 32, rotation_range: int = 30):
+class ImageProcessor(Processor):
+    def __init__(self, 
+                 base_dir: str, 
+                 image_size: Tuple[int, int] = (64, 64), 
+                 batch_size: int = 32, 
+                 rotation_range: int = 30, 
+                 split_ratios: Tuple[float, float, float] = (0.7, 0.15, 0.15), 
+                 shuffle: bool = True):
+        """
+        :param base_dir: Root directory containing data organized by patient.
+        :param image_size: Size to resize the images.
+        :param batch_size: Batch size for training.
+        :param rotation_range: Maximum angle for random rotation.
+        :param split_ratios: Proportion for splitting into training, validation, and testing sets.
+        :param shuffle: If True, randomizes the order of patients before splitting the data.
+        """
         self.base_dir = base_dir
         self.image_size = image_size
         self.batch_size = batch_size
         self.rotation_range = rotation_range
+        self.split_ratios = split_ratios
+        self.shuffle = shuffle
+
+        self.train_sample, self.validation_sample, self.test_sample = self._split_samples()
+
+    def _split_samples(self) -> Tuple[List[str], List[str], List[str]]:
+        """Splits patients into training, validation, and testing sets."""
+        patients = [d for d in os.listdir(self.base_dir) if os.path.isdir(os.path.join(self.base_dir, d))]
+        if self.shuffle:
+            random.shuffle(patients)
+
+        train_size = int(self.split_ratios[0] * len(patients))
+        val_size = int(self.split_ratios[1] * len(patients))
+        train = patients[:train_size]
+        validation = patients[train_size:train_size + val_size]
+        test = patients[train_size + val_size:]
+
+        return train, validation, test
 
     def _load_image(self, image_path: str) -> np.ndarray:
+        """Loads an image from the path and applies transformations."""
         try:
             image = Image.open(image_path).convert('RGB')
-            
+
+            # Random rotation
             angle = random.uniform(-self.rotation_range, self.rotation_range)
             image = image.rotate(angle)
 
+            # Resize and normalize to CHW format
             img_data = np.array(image.resize(self.image_size))
             img_data = np.transpose(img_data, (2, 0, 1))
             return img_data
         except Exception as e:
-            raise SystemError(f"Não foi possível processar a imagem {image_path}: {e}")
+            raise SystemError(f"Unable to process the image {image_path}: {e}")
 
-    def _load_images_from_class(self, class_path: str) -> list:
-        images = []
-        for image_file in os.listdir(class_path):
-            image_path = os.path.join(class_path, image_file)
-            images.append(self._load_image(image_path))
-        return images
+    def _generate_batches(self, patient_paths: List[str]) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        """
+        Generates batches by loading images on demand.
 
-    def _process_sample_folder(self, sample_folder: str) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
-        class_paths = {}
-        
-        for class_folder in os.listdir(sample_folder):
-            class_path = os.path.join(sample_folder, class_folder)
-            if os.path.isdir(class_path):
-                class_label = int(class_folder)
-                class_paths[class_label] = self._load_images_from_class(class_path)
+        :param patient_paths: List of patient directories.
+        """
+        all_image_paths = []
+        for patient in patient_paths:
+            patient_dir = os.path.join(self.base_dir, patient)
+            for class_label in os.listdir(patient_dir):
+                class_dir = os.path.join(patient_dir, class_label)
+                if os.path.isdir(class_dir):
+                    label = int(class_label)  # Class 0 or 1
+                    for image_file in os.listdir(class_dir):
+                        image_path = os.path.join(class_dir, image_file)
+                        all_image_paths.append((image_path, label))
 
-        num_classes = len(class_paths)
-        if num_classes == 0:
-            raise ValueError(f"Nenhuma classe encontrada em {sample_folder}")
-
-        class_data = [(label, images) for label, images in class_paths.items()]
-        random.shuffle(class_data)
-
-        all_images = []
-        for label, images in class_data:
-            all_images.extend([(img, label) for img in images])
-        
-        random.shuffle(all_images)
+        random.shuffle(all_image_paths)
 
         batch_data = []
         batch_labels = []
-        
-        for img, label in all_images:
+
+        for image_path, label in all_image_paths:
+            img = self._load_image(image_path)
             batch_data.append(img)
-            batch_labels.append(np.eye(num_classes)[label])
-            
+            batch_labels.append(np.eye(2)[label])  # One-hot encoding
+
             if len(batch_data) == self.batch_size:
                 yield np.array(batch_data), np.array(batch_labels)
                 batch_data, batch_labels = [], []
@@ -67,14 +94,14 @@ class ImageProcessor:
         if batch_data:
             yield np.array(batch_data), np.array(batch_labels)
 
-    def _process_directory(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
-        for sample_folder in os.listdir(self.base_dir):
-            sample_path = os.path.join(self.base_dir, sample_folder)
+    def get_train_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        """Generates training batches."""
+        return self._generate_batches(self.train_sample)
 
-            if not os.path.isdir(sample_path):
-                raise ValueError(f"{sample_path} não é um diretório")
+    def get_val_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        """Generates validation batches."""
+        return self._generate_batches(self.validation_sample)
 
-            yield from self._process_sample_folder(sample_path)
-
-    def process_images(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
-        return self._process_directory()
+    def get_test_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        """Generates test batches."""
+        return self._generate_batches(self.test_sample)

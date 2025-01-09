@@ -14,6 +14,10 @@ class CnnNetwork(DenseNetwork):
     
     def __init__(self, config: dict):
         self._mode = 'test'
+
+        assert config.get('processor') is not None, "processor not defined"
+
+        self.set_processor(config.get('processor'))
         self.initializer: Initialization = config.get('initializer', Xavier())
         self.filters_options = self.initializer.get_filters_options(config.get('filters'))
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
@@ -312,4 +316,4 @@ class CnnNetwork(DenseNetwork):
         return self.forward(x)
     
     def get_trainer(self):
-        return CnnTrainer(self)
+        return CnnTrainer(self, self.get_processor())

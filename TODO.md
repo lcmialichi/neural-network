@@ -15,6 +15,7 @@
 ### Dense Network
 - [X] Create loss and accuracy for each activation defined by the user
 - [ ] Add dynamic derivative in backpropagation for errors other than softmax
+- [ ] Update dense trainer
 
 ### Conv Network
 - [X] Fix max-pooling ``_unpooling`` method (original height and width are incorrect)

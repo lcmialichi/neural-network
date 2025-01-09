@@ -8,6 +8,8 @@ from neural_network.activations import LeakyRelu
 from neural_network.board import FileInput
 from neural_network.core import Padding
 from neural_network.activations import Softmax
+from neural_network.core.image_processor import ImageProcessor
+
 
 def create_configuration():
     config = CnnConfiguration({
@@ -17,6 +19,18 @@ def create_configuration():
         'dropout': 0.2,
         'optimize': True
     })
+
+    # Processor for test, validation and training process
+    config.set_processor(
+        ImageProcessor(
+            base_dir="./data/breast-histopathology-images",
+            image_size=(50, 50),
+            batch_size=32,
+            rotation_range=30,
+            split_ratios=(0.7, 0.15, 0.15),
+            shuffle=True
+        )
+    )
     
     config.with_initializer(He(path="./data/cache/he.pkl"))
     config.padding_type(Padding.SAME)
@@ -60,20 +74,21 @@ def create_app(config: CnnConfiguration) -> App:
 
 def train_model(app: App, plot:bool):
     app.model().set_training_mode()
-    app.train_images(
-        base_dir="./data/breast-histopathology-images",
-        image_size=(50, 50),
+    app.model().get_trainer().train(
         epochs=10,
-        batch_size=32,
         plot= Chart().plot_metrics if plot else None
     )
     
-def test_model(app: App):
+def validate_model(app: App):
     app.draw()
     app.model().set_test_mode()
     app.board().set_handler(handler=app.predict_image)
     app.board().set_labels(path_json="./labels/breast_cancer.json")
     app.loop()
+
+def test_model(app: App):
+    app.model().set_test_mode()
+    app.model().get_tester().test()
 
 def main():
     commands = Commands(argparse.ArgumentParser(description="train or test the model"))
@@ -89,6 +104,9 @@ def main():
     
     if args.mode == "train":
         train_model(app, args.plot)
+
+    elif args.mode == "validate":
+        validate_model(app)
 
     elif args.mode == "test":
         test_model(app)
