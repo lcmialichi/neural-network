@@ -10,7 +10,6 @@ from neural_network.core import Padding
 from neural_network.activations import Softmax
 from neural_network.core.image_processor import ImageProcessor
 
-
 def create_configuration():
     config = CnnConfiguration({
         'input_shape': (3, 50, 50),
@@ -86,9 +85,9 @@ def validate_model(app: App):
     app.board().set_labels(path_json="./labels/breast_cancer.json")
     app.loop()
 
-def test_model(app: App):
+def test_model(app: App, plot:bool):
     app.model().set_test_mode()
-    app.model().get_tester().test()
+    app.model().get_tester().test(plot= Chart().plot_metrics if plot else None)
 
 def main():
     commands = Commands(argparse.ArgumentParser(description="train or test the model"))
@@ -97,19 +96,22 @@ def main():
     args = commands.get_args()
     config = create_configuration()
     
-    if args.clear_cache: config.restore_initialization_cache()
-    if args.no_cache: config.with_no_cache() 
+    if args.clear_cache: 
+        config.restore_initialization_cache()
+
+    if args.no_cache: 
+        config.with_no_cache() 
 
     app = create_app(config)
-    
-    if args.mode == "train":
-        train_model(app, args.plot)
 
-    elif args.mode == "validate":
-        validate_model(app)
+    modes  = {
+        "train": lambda: train_model(app, args.plot),
+        "validate": lambda: validate_model(app),
+        "test": lambda: test_model(app, args.plot),
+    }
 
-    elif args.mode == "test":
-        test_model(app)
+    action = modes .get(args.mode)
+    action()
     
 if __name__ == "__main__":
     main()

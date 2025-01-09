@@ -32,15 +32,13 @@ class ImageProcessor(Processor):
 
     def _split_samples(self) -> Tuple[List[str], List[str], List[str]]:
         """Splits patients into training, validation, and testing sets."""
-        patients = [d for d in os.listdir(self.base_dir) if os.path.isdir(os.path.join(self.base_dir, d))]
-        if self.shuffle:
-            random.shuffle(patients)
+        sample = [d for d in os.listdir(self.base_dir) if os.path.isdir(os.path.join(self.base_dir, d))]
 
-        train_size = int(self.split_ratios[0] * len(patients))
-        val_size = int(self.split_ratios[1] * len(patients))
-        train = patients[:train_size]
-        validation = patients[train_size:train_size + val_size]
-        test = patients[train_size + val_size:]
+        train_size = int(self.split_ratios[0] * len(sample))
+        val_size = int(self.split_ratios[1] * len(sample))
+        train = sample[:train_size]
+        validation = sample[train_size:train_size + val_size]
+        test = sample[train_size + val_size:]
 
         return train, validation, test
 
@@ -96,6 +94,8 @@ class ImageProcessor(Processor):
 
     def get_train_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
         """Generates training batches."""
+        if self.shuffle:
+            random.shuffle(self.train_sample)
         return self._generate_batches(self.train_sample)
 
     def get_val_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:

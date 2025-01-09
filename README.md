@@ -147,13 +147,8 @@ Convolution is the core operation of a convolutional neural network, designed to
 After configuring your network and downloading the dataset, you can train the model with the provided data. Training is done via the ``train_images`` method, and you can configure the number of epochs, batch size, and even the result plotting function:
 
 ```python
-app.train_images(
-        base_dir="./data/breast-histopathology-images",
-        image_size=(50,50),
-        epochs=10,
-        batch_size=64,
-        plot=Chart(size=2).plot_activations
-    )
+app.model().set_training_mode()
+app.model().get_trainer().train(epochs=10)
 ```
 
 ## Features
