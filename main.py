@@ -5,6 +5,7 @@ from neural_network.board import Chart
 from neural_network.initializations import He
 from neural_network.configuration import CnnConfiguration
 from neural_network.activations import LeakyRelu
+from neural_network.activations import Relu
 from neural_network.board import FileInput
 from neural_network.core import Padding
 from neural_network.activations import Softmax
@@ -13,9 +14,9 @@ from neural_network.core.image_processor import ImageProcessor
 def create_configuration():
     config = CnnConfiguration({
         'input_shape': (3, 50, 50),
-        'learning_rate': 0.001,
-        'regularization_lambda': 0.001,
-        'dropout': 0.2,
+        'learning_rate': 0.0001,
+        'regularization_lambda': 0.002,
+        'dropout': 0.3,
         'optimize': True
     })
 
@@ -25,9 +26,14 @@ def create_configuration():
             base_dir="./data/breast-histopathology-images",
             image_size=(50, 50),
             batch_size=32,
-            rotation_range=30,
             split_ratios=(0.7, 0.15, 0.15),
-            shuffle=True
+            shuffle=True,
+            rotation_range=30,
+            rand_horizontal_flip=0.5,
+            rand_vertical_flip=0.5,
+            rand_brightness=0.5,
+            rand_contrast=0.5,
+            rand_crop=0.5
         )
     )
     
@@ -35,12 +41,13 @@ def create_configuration():
     config.padding_type(Padding.SAME)
     
     # first layer
-    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=Relu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
 
     # second layer
     config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
 
     # third layer
@@ -53,7 +60,6 @@ def create_configuration():
     config.add_batch_normalization()
 
     # dense layers
-    config.add_hidden_layer(size=512, activation=LeakyRelu())
     config.add_hidden_layer(size=256, activation=LeakyRelu())
     config.add_hidden_layer(size=128, activation=LeakyRelu())
     

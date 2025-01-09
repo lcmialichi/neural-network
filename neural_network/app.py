@@ -5,20 +5,20 @@ import numpy as np
 
 class App:
     def __init__(self, board: Drawable, model: BaseNetwork):
-        self.__model = model
-        self.__board: Drawable = board
+        self._model = model
+        self._board: Drawable = board
 
     def draw(self) -> None:
         self.board().draw()
         
     def model(self) -> BaseNetwork:
-        return self.__model
+        return self._model
 
     def board(self) -> Drawable:
-        return self.__board
+        return self._board
     
     def predict_image(self, image: np.ndarray):
-        return np.argmax(self.__model.predict(image))
+        return np.argmax(self._model.predict(image))
     
     def loop(self) -> None:
         self.board().loop()

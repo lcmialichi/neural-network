@@ -149,7 +149,7 @@ Max pooling is a down-sampling operation used in convolutional neural networks t
 Convolution is the core operation of a convolutional neural network, designed to detect patterns and features in images, such as edges, textures, and shapes. A convolutional layer applies filters (or kernels) to the input image to generate feature maps
 
 ### Training
-After configuring your network and downloading the dataset, you can train the model with the provided data. Training is done via the ``train_images`` method, and you can configure the number of epochs, batch size, and even the result plotting function:
+After configuring your network and downloading the dataset, you can train the model with the provided data. Training is done via the ``train`` method, and you can configure the number of epochs, batch size, and even the result plotting function:
 
 ```python
 app.model().set_training_mode()

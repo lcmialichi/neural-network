@@ -25,7 +25,7 @@ class Tester:
                 num_batches += 1
 
                 if plot is not None:
-                    plot(1, num_batches, loss, accuracy)
+                    plot(1, loss, accuracy)
                     
                 progress_bar.set_postfix(loss=f'{loss:.4f}', accuracy=f'{accuracy:.4f}')
 

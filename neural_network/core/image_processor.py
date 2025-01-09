@@ -4,29 +4,33 @@ from PIL import Image
 import numpy as np
 from typing import Tuple, List, Generator
 from neural_network.core.processor import Processor
+from PIL import ImageEnhance 
 
 class ImageProcessor(Processor):
     def __init__(self, 
-                 base_dir: str, 
-                 image_size: Tuple[int, int] = (64, 64), 
-                 batch_size: int = 32, 
-                 rotation_range: int = 30, 
-                 split_ratios: Tuple[float, float, float] = (0.7, 0.15, 0.15), 
-                 shuffle: bool = True):
-        """
-        :param base_dir: Root directory containing data organized by patient.
-        :param image_size: Size to resize the images.
-        :param batch_size: Batch size for training.
-        :param rotation_range: Maximum angle for random rotation.
-        :param split_ratios: Proportion for splitting into training, validation, and testing sets.
-        :param shuffle: If True, randomizes the order of patients before splitting the data.
-        """
+        base_dir: str, 
+        image_size: Tuple[int, int] = (64, 64), 
+        batch_size: int = 32, 
+        rotation_range: int = 30, 
+        split_ratios: Tuple[float, float, float] = (0.7, 0.15, 0.15), 
+        shuffle: bool = True,
+        rand_horizontal_flip: float = 0.0,
+        rand_vertical_flip: float = 0.0,
+        rand_brightness: float = 0.0,
+        rand_contrast: float = 0.0,
+        rand_crop: float = 0.0,
+    ):
         self.base_dir = base_dir
         self.image_size = image_size
         self.batch_size = batch_size
         self.rotation_range = rotation_range
         self.split_ratios = split_ratios
         self.shuffle = shuffle
+        self.rand_horizontal_flip = rand_horizontal_flip
+        self.rand_vertical_flip = rand_vertical_flip
+        self.rand_brightness = rand_brightness
+        self.rand_contrast = rand_contrast
+        self.rand_crop = rand_crop
 
         self.train_sample, self.validation_sample, self.test_sample = self._split_samples()
 
@@ -42,14 +46,14 @@ class ImageProcessor(Processor):
 
         return train, validation, test
 
-    def _load_image(self, image_path: str) -> np.ndarray:
+    def _load_image(self, image_path: str, apply_mask: bool = False) -> np.ndarray:
         """Loads an image from the path and applies transformations."""
         try:
             image = Image.open(image_path).convert('RGB')
 
             # Random rotation
-            angle = random.uniform(-self.rotation_range, self.rotation_range)
-            image = image.rotate(angle)
+            if apply_mask:
+                image = self._apply_mask(image)
 
             # Resize and normalize to CHW format
             img_data = np.array(image.resize(self.image_size))
@@ -58,7 +62,31 @@ class ImageProcessor(Processor):
         except Exception as e:
             raise SystemError(f"Unable to process the image {image_path}: {e}")
 
-    def _generate_batches(self, patient_paths: List[str]) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+    def _apply_mask(self, image): 
+        angle = random.uniform(-self.rotation_range, self.rotation_range)
+        image = image.rotate(angle)
+
+        if random.random() <= self.rand_horizontal_flip:
+            image = image.transpose(Image.FLIP_LEFT_RIGHT)
+
+        if random.random() <= self.rand_vertical_flip:
+            image = image.transpose(Image.FLIP_TOP_BOTTOM)
+
+        if random.random() <= self.rand_brightness:
+            factor = random.uniform(0.8, 1.2)
+            image = ImageEnhance.Brightness(image).enhance(factor)
+
+        if random.random() <= self.rand_crop:
+            width, height = image.size
+            crop_size = (random.uniform(0.8, 1.0) * width, random.uniform(0.8, 1.0) * height)
+            left = random.uniform(0, width - crop_size[0])
+            top = random.uniform(0, height - crop_size[1])
+            image = image.crop((left, top, left + crop_size[0], top + crop_size[1]))
+            image = image.resize(self.image_size)
+
+        return image
+
+    def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
         """
         Generates batches by loading images on demand.
 
@@ -70,7 +98,7 @@ class ImageProcessor(Processor):
             for class_label in os.listdir(patient_dir):
                 class_dir = os.path.join(patient_dir, class_label)
                 if os.path.isdir(class_dir):
-                    label = int(class_label)  # Class 0 or 1
+                    label = int(class_label)
                     for image_file in os.listdir(class_dir):
                         image_path = os.path.join(class_dir, image_file)
                         all_image_paths.append((image_path, label))
@@ -81,9 +109,9 @@ class ImageProcessor(Processor):
         batch_labels = []
 
         for image_path, label in all_image_paths:
-            img = self._load_image(image_path)
+            img = self._load_image(image_path, apply_mask)
             batch_data.append(img)
-            batch_labels.append(np.eye(2)[label])  # One-hot encoding
+            batch_labels.append(np.eye(2)[label])
 
             if len(batch_data) == self.batch_size:
                 yield np.array(batch_data), np.array(batch_labels)
@@ -96,12 +124,12 @@ class ImageProcessor(Processor):
         """Generates training batches."""
         if self.shuffle:
             random.shuffle(self.train_sample)
-        return self._generate_batches(self.train_sample)
+        return self._generate_batches(self.train_sample, apply_mask=True)
 
     def get_val_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
         """Generates validation batches."""
-        return self._generate_batches(self.validation_sample)
+        return self._generate_batches(self.validation_sample, apply_mask=False)
 
     def get_test_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
         """Generates test batches."""
-        return self._generate_batches(self.test_sample)
+        return self._generate_batches(self.test_sample, apply_mask=False)
