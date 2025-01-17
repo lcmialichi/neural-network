@@ -32,6 +32,12 @@ class BaseNetwork(ABC):
     
     def set_processor(self, processor: Processor) -> None: 
         self._processor = processor
+        
+    def get_learning_rate(self) -> float: 
+        self.global_optimizer.get_learning_rate()
+    
+    def set_learning_rate(self, val: float) -> None:
+        self.global_optimizer.set_learning_rate(val)
     
     @abstractmethod
     def get_trainer(self) -> "BaseTrainer":
@@ -49,8 +55,9 @@ class BaseNetwork(ABC):
     def get_output_accuracy(self, x: np.ndarray, z: np.ndarray):
         return self.output.get('activation').accuracy(x, z)
     
-    def apply_dropout(self, activations: np.ndarray) -> np.ndarray:
-        mask = np.random.binomial(1, 1 - self.dropout_rate, size=activations.shape)
+    def _apply_dropout(self, activations: np.ndarray, rate: float) -> np.ndarray:
+        retain_prob = 1 - rate
+        mask = self.rng.random(size=activations.shape) < retain_prob
         activations = activations * mask
-        activations /= (1 - self.dropout_rate)
+        activations /= retain_prob
         return activations

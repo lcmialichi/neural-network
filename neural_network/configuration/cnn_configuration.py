@@ -5,19 +5,33 @@ from neural_network.core import Activation
 from neural_network.activations import Relu
 from neural_network.activations import Softmax
 from neural_network.core.processor import Processor
+from neural_network.storage import Storage
+from neural_network.core import Optimizer
+from typing import Union
 import numpy as np
 
 class CnnConfiguration:
-    def __init__(self, config: dict = None):
+    def __init__(self, config: dict = None, storage: Union[None, Storage] = None):
         if config is None:
             config = {}
-            
+        
+        self._storage = storage
         self._config: dict = config
         self._config['hidden_layers'] = self._config.get('hidden_layers', [])
         self._config['filters'] = self._config.get('filters', [])
     
+    def with_cache(self, path: str) -> "CnnConfiguration":
+        self._storage = Storage(path)
+        return self
+    
+    def set_global_optimizer(self, optimizer: Optimizer):
+        self._config['global_optimizer'] = optimizer
+    
     def new_model(self) -> "CnnNetwork":
-        return CnnNetwork(self.get_config())
+        if self._storage and self._storage.has():
+            return self._storage.get()
+        
+        return CnnNetwork(self.get_config(), self._storage)
     
     def get_config(self) -> dict:
         return self._config
@@ -26,10 +40,17 @@ class CnnConfiguration:
         self._config['input_shape'] = (channels, height, width)
         return self
     
-    def add_hidden_layer(self, size: int, activation: Activation = Relu()) -> "CnnConfiguration":
+    def add_hidden_layer(
+        self, size: int, 
+        activation: Activation = Relu(),
+        dropout: Union[float, None] = None,
+        optimizer: Union[Optimizer, None] = None
+        ) -> "CnnConfiguration":
         self._config['hidden_layers'].append({
             'size': size,
-            'activation': activation
+            'activation': activation,
+            'dropout': dropout,
+            'optimizer': optimizer
         })
         return self
     
@@ -52,10 +73,6 @@ class CnnConfiguration:
         self._config['regularization_lambda'] = regularization
         return self
     
-    def dropout_rate(self, rate: float) -> "CnnConfiguration":
-        self._config['dropout_rate'] = rate
-        return self
-    
     def padding_type(self, padding: Padding) -> "CnnConfiguration":
         self._config['padding_type'] = padding
         return self
@@ -64,13 +81,17 @@ class CnnConfiguration:
         self, filter_number: int, 
         filter_shape: tuple[int, int] = (3, 3),
         stride: int = 1,
-        activation: Activation = Relu()
+        activation: Activation = Relu(),
+        dropout: Union[float, None] = None,
+        optimizer: Union[Optimizer, None] = None
     ) -> "CnnConfiguration":
         self._config['filters'].append({
             'number': filter_number,
             'shape': filter_shape,
             'stride': stride,
-            'activation': activation
+            'activation': activation,
+            'dropout': dropout,
+            'optimizer': optimizer
         })
 
         return self
@@ -116,12 +137,12 @@ class CnnConfiguration:
         return self
     
     def restore_initialization_cache(self):
-        if "initializer" in self._config:
-            self._config["initializer"].remove_cache()
+        if self._storage and self._storage.has():
+            self._storage.remove()
             
     def with_no_cache(self):
-        if "initializer" in self._config:
-            self._config["initializer"].clear_cached_data()
+        if self._storage:
+            self._storage = None
     
     def set_processor(self, processor: Processor):
         self._config['processor'] = processor

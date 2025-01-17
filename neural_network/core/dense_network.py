@@ -9,11 +9,10 @@ from neural_network.optimizers import Adam
 
 class DenseNetwork(BaseNetwork):
     def __init__(self, config: dict, initializer: Initialization = Xavier()):
-        self.optimizer = None
+        self.global_optimizer = config.get('global_optimizer', Adam(learning_rate=0.01))
         self.input_size: int = config.get('input_size', 0)
         self.hidden_layers: int = config.get('hidden_layers', [])
         self.output: dict = config.get('output')
-        self.learning_rate: float = config.get('learning_rate', 0.01)
         self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
         self.dropout_rate: float = config.get('dropout', 0.0)
         self.layers_number: int = len(self.hidden_layers)
@@ -33,31 +32,22 @@ class DenseNetwork(BaseNetwork):
        
         self.hidden_output: list = []
         self.hidden_activations: list = []
-        
-        if config.get('optimize', True):
-            self.optimizer = Adam(
-                learning_rate=self.learning_rate
-                )
+       
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         self.hidden_outputs = []
         output = x
         for layer_idx in range(self.layers_number):
             activation: Activation = self.hidden_layers[layer_idx]['activation']
+            dropout = self.hidden_layers[layer_idx]['dropout']
             output = activation.activate(np.dot(output, self.weights[layer_idx]) + self.biases[layer_idx])
             if self._mode in 'train':
-                output = self._apply_dropout(output)
+                if dropout:
+                    output = self._apply_dropout(output, dropout)
                 self.hidden_outputs.append(output)
         
         activation: Activation = self.output.get('activation')
         return activation.activate(np.dot(output, self.weights[-1]) + self.biases[-1])
-
-    def _apply_dropout(self, activations: np.ndarray) -> np.ndarray:
-        retain_prob = 1 - self.dropout_rate
-        mask = self.rng.random(size=activations.shape) < retain_prob
-        activations = activations * mask
-        activations /= retain_prob
-        return activations
 
     def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
         output_error = output - y
@@ -73,10 +63,10 @@ class DenseNetwork(BaseNetwork):
         for i in range(len(self.weights)):
             input_activation = x if i == 0 else self.hidden_outputs[i - 1]
             grad_weight = input_activation.T.dot(deltas[i]) + self.regularization_lambda * self.weights[i]
-            self.weights[i] = self.optimizer.update(f"weights_{i}", self.weights[i], grad_weight)
+            self.weights[i] = self.global_optimizer.update(f"weights_{i}", self.weights[i], grad_weight)
 
             grad_bias = np.sum(deltas[i], axis=0)
-            self.biases[i] = self.optimizer.update(f"biases_{i}", self.biases[i], grad_bias)
+            self.biases[i] = self.global_optimizer.update(f"biases_{i}", self.biases[i], grad_bias)
 
         return deltas[0].dot(self.weights[0].T).reshape(x.shape)
 

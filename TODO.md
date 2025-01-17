@@ -6,11 +6,12 @@
 - [X] Create clear cache command
 - [X] Create no-cache command
 - [X] Create plot command
-- [ ] Set dropout rate to multiple layers
+- [X] Set dropout rate to multiple layers
 - [X] Update readme file
 - [X] Fix loss and accuracy plot
 - [ ] Add multiple optimizer
 - [X] improve training options
+- [X] add learning rate scheduler
 
 ### Dense Network
 - [X] Create loss and accuracy for each activation defined by the user

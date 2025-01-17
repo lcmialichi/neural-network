@@ -1,7 +1,8 @@
 import numpy as np
+from neural_network.core import Optimizer
 
-class Adam:
-    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8):
+class Adam(Optimizer):
+    def __init__(self, learning_rate=0.001, beta1=0.95, beta2=0.98, epsilon=1e-8):
         self.learning_rate = learning_rate
         self.beta1 = beta1
         self.beta2 = beta2

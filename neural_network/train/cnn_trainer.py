@@ -1,4 +1,5 @@
 from neural_network.core.image_processor import ImageProcessor
+from neural_network.core.scheduler import Scheduler
 from .base_trainer import BaseTrainer
 from typing import Callable, Union, Tuple
 from tqdm import tqdm
@@ -8,7 +9,8 @@ class CnnTrainer(BaseTrainer):
             self,
             epochs: int = 10, 
             plot: Union[None, Callable] = None,
-    ) -> None:        
+            scheduler: Union[None, Scheduler] = None
+    ) -> None:
         for epoch in range(epochs):
             epoch_loss = 0
             epoch_accuracy = 0
@@ -41,7 +43,7 @@ class CnnTrainer(BaseTrainer):
                 f" - \033[1;34mLoss\033[0m: {epoch_loss:.4f}, "
                 f"\033[1;34mAccuracy\033[0m: {epoch_accuracy:.4f} "
                 f"\033[1;33mbatches\033[0m: {num_batches}, "
-                f"\033[1;36mtime\033[0m: {total_time:.2f} seconds"
+                f"\033[1;36mtime\033[0m: {total_time:.2f} seconds",
             )
 
             loss, accurracy = self._validate(epoch)
@@ -50,6 +52,9 @@ class CnnTrainer(BaseTrainer):
                 f" - \033[1;34mLoss\033[0m: {loss:.4f}, "
                 f"\033[1;34mAccuracy\033[0m: {accurracy:.4f}"
             )
+            
+            if scheduler:
+                scheduler(self._model, loss, accurracy)
 
     def _validate(self, epoch: int) -> Tuple[float, float]:
         val_loss = 0

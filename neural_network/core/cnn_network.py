@@ -5,6 +5,8 @@ from neural_network.train import CnnTrainer
 from neural_network.core.padding import Padding
 from neural_network.core import Initialization
 from neural_network.core import Activation
+from neural_network.storage import Storage
+from typing import Union
 
 class CnnNetwork(DenseNetwork):
     
@@ -12,9 +14,9 @@ class CnnNetwork(DenseNetwork):
     cached_pooling_indexes: list = []
     cached_bn: list = []
     
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, storage: Union[None, Storage]):
         self._mode = 'test'
-
+        self._storage = storage
         assert config.get('processor') is not None, "processor not defined"
 
         self.set_processor(config.get('processor'))
@@ -22,9 +24,9 @@ class CnnNetwork(DenseNetwork):
         self.filters_options = self.initializer.get_filters_options(config.get('filters'))
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
-
         self.filters = self.initializer.generate_filters(self.filters_options, self.input_shape[0])
         self.kernel_biases = self.initializer.generate_kernel_bias(self.filters)
+
 
         config['input_size'] = self._calculate_input_size(self.input_shape, self.filters_options)
         
@@ -55,8 +57,8 @@ class CnnNetwork(DenseNetwork):
             
             
             self.cached_convolutions.append(output)
-            if self._mode in 'train':
-                output = self._apply_dropout(output)
+            if self._mode in 'train' and options.get('dropout'):
+                output = self._apply_dropout(output, options.get('dropout'))
                 
         return output
 
@@ -260,7 +262,7 @@ class CnnNetwork(DenseNetwork):
             conv = self.cached_convolutions[i]
             
             grad_bias = np.sum(delta_conv, axis=(0, 2, 3))
-            self.kernel_biases[i] = self.optimizer.update(f"kernel_bias_{i}", self.kernel_biases[i], grad_bias)
+            self.kernel_biases[i] = self.global_optimizer.update(f"kernel_bias_{i}", self.kernel_biases[i], grad_bias)
 
             delta_conv *= activation.derivate(conv)
             padding = self._get_padding((input_layer.shape[2], input_layer.shape[3]), (fh, fw), options.get('stride'))
@@ -271,10 +273,10 @@ class CnnNetwork(DenseNetwork):
             
             if 'bn' in options:
                 delta_conv, dgamma, dbeta = self._batch_norm_backward(delta_conv, self.cached_bn.pop())
-                options['bn']['gamma'] = self.optimizer.update(
+                options['bn']['gamma'] = self.global_optimizer.update(
                     f"gamma_{i}", options['bn']['gamma'], dgamma
                 )
-                options['bn']['beta'] = self.optimizer.update(
+                options['bn']['beta'] = self.global_optimizer.update(
                     f"beta_{i}", options['bn']['beta'], dbeta
                 )
                 
@@ -294,7 +296,7 @@ class CnnNetwork(DenseNetwork):
           
         filter_gradients.reverse()
         for i in range(len(self.filters)):
-            self.filters[i] = self.optimizer.update(f"filter_{i}", self.filters[i], filter_gradients[i])
+            self.filters[i] = self.global_optimizer.update(f"filter_{i}", self.filters[i], filter_gradients[i])
 
         return dense_deltas
     
@@ -302,14 +304,8 @@ class CnnNetwork(DenseNetwork):
         output_batch = self.forward(x_batch)
         self.backward(x_batch, y_batch, output_batch)
         
-        if self.initializer.save_data():
-            self.initializer.store(
-                bias=self.biases, 
-                filters=self.filters, 
-                layers=self.weights, 
-                filters_options=self.filters_options
-            )
-            
+        if self._storage:
+            self._storage.store(self)            
         return output_batch
     
     def predict(self, x) -> np.ndarray:
