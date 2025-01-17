@@ -1,4 +1,4 @@
-import numpy as np
+from neural_network.gcpu import gcpu
 from neural_network.core.dense_network import DenseNetwork
 from neural_network.initializations import Xavier
 from neural_network.train import CnnTrainer
@@ -7,6 +7,7 @@ from neural_network.core import Initialization
 from neural_network.core import Activation
 from neural_network.storage import Storage
 from typing import Union
+
 
 class CnnNetwork(DenseNetwork):
     
@@ -31,20 +32,29 @@ class CnnNetwork(DenseNetwork):
         config['input_size'] = self._calculate_input_size(self.input_shape, self.filters_options)
         
         super().__init__(config, initializer=self.initializer)
-         
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    
+    def __getstate__(self):
+      state = self.__dict__.copy()
+      state["rng"] = None 
+      return state
+
+    def __setstate__(self, state):
+      self.__dict__.update(state)
+      self.rng = gcpu.random.default_rng(42)
+
+    def forward(self, x):
         self.cached_convolutions = []
         self.cached_pooling_indexes = []
         self.cached_bn = []
         convoluted = self._apply_convolutions(x)
         return super().forward(convoluted.reshape(x.shape[0], -1))
 
-    def _apply_convolutions(self, x: np.ndarray) -> np.ndarray:
+    def _apply_convolutions(self, x):
         output = x
         for index, filters in enumerate(self.filters):
             options: dict = self.filters_options[index]
             output = self._apply_single_convolution(output, filters, options['stride'])
-            output += self.kernel_biases[index][:, np.newaxis, np.newaxis]
+            output += self.kernel_biases[index][:, gcpu.newaxis, gcpu.newaxis]
                                                 
             if "bn" in options:
                 output = self._batch_normalize(output, options['bn'])
@@ -62,7 +72,7 @@ class CnnNetwork(DenseNetwork):
                 
         return output
 
-    def _apply_single_convolution(self, input: np.ndarray, filters: np.ndarray, stride: int = 1) -> np.ndarray:
+    def _apply_single_convolution(self, input, filters, stride: int = 1):
         _, _, i_h, i_w = input.shape
         padding = self._get_padding((i_h, i_w), (filters.shape[2], filters.shape[3]), stride)
         
@@ -71,7 +81,7 @@ class CnnNetwork(DenseNetwork):
         
         filters_reshaped = filters.reshape(filters.shape[0], -1)
         
-        conv_output = np.einsum('ij,bj->bi', filters_reshaped, col)
+        conv_output = gcpu.einsum('ij,bj->bi', filters_reshaped, col)
 
         output_height, output_width = self._get_output_size(
             i_h, i_w, (filters.shape[2], filters.shape[3]), stride, padding
@@ -80,7 +90,7 @@ class CnnNetwork(DenseNetwork):
         return conv_output.reshape(input.shape[0], filters.shape[0], output_height, output_width)
 
 
-    def _apply_max_pooling(self, input: np.ndarray, pooling_shape: tuple[int, int] = (2, 2), stride: int = 1) -> tuple[np.ndarray, np.ndarray]:
+    def _apply_max_pooling(self, input, pooling_shape: tuple[int, int] = (2, 2), stride: int = 1):
         batch_size, channels, height, width = input.shape
         
         output_height, output_width = self._get_output_size(
@@ -90,31 +100,31 @@ class CnnNetwork(DenseNetwork):
         col = self._im2col(input, pooling_shape, stride)
         col = col.reshape(batch_size, channels, output_height, output_width, -1)
 
-        max_vals = np.max(col, axis=-1)
-        max_idxs = np.argmax(col, axis=-1)
+        max_vals = gcpu.max(col, axis=-1)
+        max_idxs = gcpu.argmax(col, axis=-1)
 
         row_indices = max_idxs // pooling_shape[1]
         col_indices = max_idxs % pooling_shape[1]
 
-        row_offsets = np.arange(0, output_height * stride, stride)[:, None]
-        col_offsets = np.arange(0, output_width * stride, stride)[None, :]
+        row_offsets = gcpu.arange(0, output_height * stride, stride)[:, None]
+        col_offsets = gcpu.arange(0, output_width * stride, stride)[None, :]
 
         row_indices += row_offsets
         col_indices += col_offsets
 
-        pooled_indexes = np.stack([row_indices, col_indices], axis=-1)
+        pooled_indexes = gcpu.stack([row_indices, col_indices], axis=-1)
         return max_vals, pooled_indexes
 
     def _unpooling(self, grad, pool_cache, size: tuple[int, int]):
         batch_size, channels, _, _ = grad.shape
-        unpooled_grad = np.zeros((batch_size, channels, size[0], size[1]))
+        unpooled_grad = gcpu.zeros((batch_size, channels, size[0], size[1]))
         
-        batch_indices, channel_indices = np.meshgrid(
-            np.arange(batch_size), np.arange(channels), indexing="ij"
+        batch_indices, channel_indices = gcpu.meshgrid(
+            gcpu.arange(batch_size), gcpu.arange(channels), indexing="ij"
         )
         
-        row_indices = np.clip(pool_cache[..., 0], 0, size[0] - 1)
-        col_indices = np.clip(pool_cache[..., 1], 0, size[1] - 1)
+        row_indices = gcpu.clip(pool_cache[..., 0], 0, size[0] - 1)
+        col_indices = gcpu.clip(pool_cache[..., 1], 0, size[1] - 1)
 
         batch_indices = batch_indices[..., None, None]
         channel_indices = channel_indices[..., None, None]
@@ -163,20 +173,20 @@ class CnnNetwork(DenseNetwork):
         padding: tuple[int, int] = (0, 0)
     ) -> tuple[int, int]:
         pad_x, pad_y = padding
-        output_height = np.ceil((height + 2 * pad_x - filter_shape[0]) / stride) + 1
-        output_width = np.ceil((width + 2 * pad_y - filter_shape[1]) / stride) + 1
+        output_height = gcpu.ceil((height + 2 * pad_x - filter_shape[0]) / stride) + 1
+        output_width = gcpu.ceil((width + 2 * pad_y - filter_shape[1]) / stride) + 1
 
         return int(output_height), int(output_width)
 
-    def _batch_normalize(self, x: np.ndarray, bn_param: dict) -> np.ndarray:
+    def _batch_normalize(self, x, bn_param: dict) -> gcpu.ndarray:
         gamma, beta, momentum = bn_param['gamma'], bn_param['beta'], bn_param['momentum']
         running_mean, running_var = bn_param['running_mean'], bn_param['running_var']
 
         if self._mode in 'train':
-            batch_mean = np.mean(x, axis=(0, 2, 3), keepdims=True)
-            batch_var = np.var(x, axis=(0, 2, 3), keepdims=True)
+            batch_mean = gcpu.mean(x, axis=(0, 2, 3), keepdims=True)
+            batch_var = gcpu.var(x, axis=(0, 2, 3), keepdims=True)
 
-            x_hat = (x - batch_mean) / np.sqrt(batch_var + 1e-8)
+            x_hat = (x - batch_mean) / gcpu.sqrt(batch_var + 1e-8)
             out = gamma * x_hat + beta
 
             bn_param['running_mean'] = momentum * running_mean + (1 - momentum) * batch_mean
@@ -184,30 +194,30 @@ class CnnNetwork(DenseNetwork):
 
             self.cached_bn.append((x, x_hat, batch_mean, batch_var, gamma))
         else:
-            x_hat = (x - running_mean) / np.sqrt(running_var + 1e-8)
+            x_hat = (x - running_mean) / gcpu.sqrt(running_var + 1e-8)
             out = gamma * x_hat + beta
 
         return out
 
-    def _batch_norm_backward(self, dout: np.ndarray, cache: tuple) -> np.ndarray:
+    def _batch_norm_backward(self, dout, cache: tuple) -> gcpu.ndarray:
         x, x_hat, mean, var, gamma = cache
         N, _, H, W = x.shape
 
-        dgamma = np.sum(dout * x_hat, axis=(0, 2, 3), keepdims=True)
-        dbeta = np.sum(dout, axis=(0, 2, 3), keepdims=True)
+        dgamma = gcpu.sum(dout * x_hat, axis=(0, 2, 3), keepdims=True)
+        dbeta = gcpu.sum(dout, axis=(0, 2, 3), keepdims=True)
 
         dx_hat = dout * gamma
-        dvar = np.sum(dx_hat * (x - mean) * -0.5 * np.power(var + 1e-8, -1.5), axis=(0, 2, 3), keepdims=True)
-        dmean = np.sum(dx_hat * -1 / np.sqrt(var + 1e-8), axis=(0, 2, 3), keepdims=True) + dvar * np.sum(-2 * (x - mean), axis=(0, 2, 3), keepdims=True) / (N * H * W)
-        dx = dx_hat / np.sqrt(var + 1e-8) + dvar * 2 * (x - mean) / (N * H * W) + dmean / (N * H * W)
+        dvar = gcpu.sum(dx_hat * (x - mean) * -0.5 * gcpu.power(var + 1e-8, -1.5), axis=(0, 2, 3), keepdims=True)
+        dmean = gcpu.sum(dx_hat * -1 / gcpu.sqrt(var + 1e-8), axis=(0, 2, 3), keepdims=True) + dvar * gcpu.sum(-2 * (x - mean), axis=(0, 2, 3), keepdims=True) / (N * H * W)
+        dx = dx_hat / gcpu.sqrt(var + 1e-8) + dvar * 2 * (x - mean) / (N * H * W) + dmean / (N * H * W)
 
         return dx, dgamma, dbeta
     
     def _add_padding(self, 
-            input: np.ndarray, 
+            input, 
             padding: tuple[int, int] = (0, 0)
-        ) -> np.ndarray:
-        return np.pad(
+        ) -> gcpu.ndarray:
+        return gcpu.pad(
             input,
             ((0, 0), (0, 0), (padding[0], padding[0]), (padding[1], padding[1])),
             mode="constant",
@@ -216,8 +226,8 @@ class CnnNetwork(DenseNetwork):
     
     def _get_padding(self, input_shape: tuple[int, int], filter_shape: tuple[int, int], stride: int = 1) -> tuple[int, int]:
         if self.padding_type == Padding.SAME:
-            output_height = np.ceil(input_shape[0] / stride)
-            output_width = np.ceil(input_shape[1] / stride)
+            output_height = gcpu.ceil(input_shape[0] / stride)
+            output_width = gcpu.ceil(input_shape[1] / stride)
             total_pad_x = max((output_height - 1) * stride + filter_shape[0] - input_shape[0], 0)
             total_pad_y = max((output_width - 1) * stride + filter_shape[1] - input_shape[1], 0)
 
@@ -228,17 +238,17 @@ class CnnNetwork(DenseNetwork):
             
         return 0, 0
     
-    def _im2col(self, image: np.ndarray, filter_size: tuple[int, int], stride: int = 1) -> np.ndarray:
+    def _im2col(self, image, filter_size: tuple[int, int], stride: int = 1) -> gcpu.ndarray:
         batch, channels, height, width = image.shape
         fh, fw = filter_size
 
-        output_height = int(np.ceil((height  - fh) / stride) + 1)
-        output_width = int(np.ceil((width  - fw) / stride) + 1)
+        output_height = int(gcpu.ceil((height  - fh) / stride) + 1)
+        output_width = int(gcpu.ceil((width  - fw) / stride) + 1)
         
         strides = image.strides
         stride_batch, stride_channel, stride_height, stride_width = strides
 
-        cols = np.lib.stride_tricks.as_strided(
+        cols = gcpu.lib.stride_tricks.as_strided(
             image,
             shape=(batch, channels, output_height, output_width, fh, fw),
             strides=(stride_batch, stride_channel, stride_height * stride, stride_width * stride, stride_height, stride_width)
@@ -247,7 +257,7 @@ class CnnNetwork(DenseNetwork):
         cols = cols.reshape(batch * output_height * output_width, -1)
         return cols
 
-    def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
+    def backward(self, x, y, output):
         filter_gradients = []
 
         dense_deltas = super().backward(self.cached_convolutions[-1].reshape(x.shape[0], -1), y, output)
@@ -261,7 +271,7 @@ class CnnNetwork(DenseNetwork):
             num_filters, input_channels, fh, fw = self.filters[i].shape
             conv = self.cached_convolutions[i]
             
-            grad_bias = np.sum(delta_conv, axis=(0, 2, 3))
+            grad_bias = gcpu.sum(delta_conv, axis=(0, 2, 3))
             self.kernel_biases[i] = self.global_optimizer.update(f"kernel_bias_{i}", self.kernel_biases[i], grad_bias)
 
             delta_conv *= activation.derivate(conv)
@@ -286,11 +296,11 @@ class CnnNetwork(DenseNetwork):
             input_reshaped = self._im2col(input_padded, (fh, fw), options.get('stride'))
 
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
-            grad_filter = np.dot(delta_reshaped.T, input_reshaped).reshape(self.filters[i].shape)
+            grad_filter = gcpu.dot(delta_reshaped.T, input_reshaped).reshape(self.filters[i].shape)
             filter_gradients.append(grad_filter)
             grad_filter += self.regularization_lambda * self.filters[i]
 
-            delta_col = delta_reshaped @ np.flip(self.filters[i].reshape(num_filters, -1), axis=1)
+            delta_col = delta_reshaped @ gcpu.flip(self.filters[i].reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
           
@@ -300,15 +310,16 @@ class CnnNetwork(DenseNetwork):
 
         return dense_deltas
     
-    def train(self, x_batch: np.ndarray, y_batch: np.ndarray) -> np.ndarray:
+    def train(self, x_batch, y_batch) -> gcpu.ndarray:
         output_batch = self.forward(x_batch)
-        self.backward(x_batch, y_batch, output_batch)
-        
-        if self._storage:
-            self._storage.store(self)            
+        self.backward(x_batch, y_batch, output_batch)            
         return output_batch
+
+    def save_state(self):
+      if self._storage:
+          self._storage.store(self)
     
-    def predict(self, x) -> np.ndarray:
+    def predict(self, x) -> gcpu.ndarray:
         return self.forward(x)
     
     def get_trainer(self):

@@ -38,7 +38,7 @@ def create_configuration():
     )
     
     # cache model state
-    config.with_cache(path="./data/cache/model.pkl")
+    config.with_cache(path="./data/cache/model2.pkl")
     
     config.set_global_optimizer(Adam(learning_rate=0.001))
     
@@ -46,22 +46,22 @@ def create_configuration():
     config.padding_type(Padding.SAME)
     
     # first layer
-    config.add_filter(filter_number=32, filter_shape=(3, 3), activation=Relu(), stride=1)
-    config.add_polling(polling_shape=(2, 2), stride=2)
-    config.add_batch_normalization()
-    
-    # second layer
     config.add_filter(filter_number=64, filter_shape=(3, 3), activation=Relu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
     
-    # third layer
+    # second layer
     config.add_filter(filter_number=128, filter_shape=(3, 3), activation=Relu(), stride=1)
+    config.add_polling(polling_shape=(2, 2), stride=2)
+    config.add_batch_normalization()
+    
+    # third layer
+    config.add_filter(filter_number=256, filter_shape=(3, 3), activation=Relu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
 
     # fourth layer
-    config.add_filter(filter_number=256, filter_shape=(3, 3), activation=Relu(), stride=1)
+    config.add_filter(filter_number=512, filter_shape=(3, 3), activation=Relu(), stride=1)
     config.add_polling(polling_shape=(2, 2), stride=2)
     config.add_batch_normalization()
     

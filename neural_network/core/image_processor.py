@@ -1,7 +1,7 @@
 import os
 import random
 from PIL import Image
-import numpy as np
+from neural_network.gcpu import gcpu
 from typing import Tuple, List, Generator
 from neural_network.core.processor import Processor
 from PIL import ImageEnhance 
@@ -46,7 +46,7 @@ class ImageProcessor(Processor):
 
         return train, validation, test
 
-    def _load_image(self, image_path: str, apply_mask: bool = False) -> np.ndarray:
+    def _load_image(self, image_path: str, apply_mask: bool = False) -> gcpu.ndarray:
         """Loads an image from the path and applies transformations."""
         try:
             image = Image.open(image_path).convert('RGB')
@@ -56,8 +56,8 @@ class ImageProcessor(Processor):
                 image = self._apply_mask(image)
 
             # Resize and normalize to CHW format
-            img_data = np.array(image.resize(self.image_size))
-            img_data = np.transpose(img_data, (2, 0, 1))
+            img_data = gcpu.array(image.resize(self.image_size))
+            img_data = gcpu.transpose(img_data, (2, 0, 1))
             return img_data
         except Exception as e:
             raise SystemError(f"Unable to process the image {image_path}: {e}")
@@ -86,7 +86,7 @@ class ImageProcessor(Processor):
 
         return image
 
-    def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+    def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple[gcpu.ndarray, gcpu.ndarray], None, None]:
         """
         Generates batches by loading images on demand.
 
@@ -111,25 +111,25 @@ class ImageProcessor(Processor):
         for image_path, label in all_image_paths:
             img = self._load_image(image_path, apply_mask)
             batch_data.append(img)
-            batch_labels.append(np.eye(2)[label])
+            batch_labels.append(gcpu.eye(2)[label])
 
             if len(batch_data) == self.batch_size:
-                yield np.array(batch_data), np.array(batch_labels)
+                yield gcpu.array(batch_data), gcpu.array(batch_labels)
                 batch_data, batch_labels = [], []
 
         if batch_data:
-            yield np.array(batch_data), np.array(batch_labels)
+            yield gcpu.array(batch_data), gcpu.array(batch_labels)
 
-    def get_train_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+    def get_train_batches(self) -> Generator[Tuple[gcpu.ndarray, gcpu.ndarray], None, None]:
         """Generates training batches."""
         if self.shuffle:
             random.shuffle(self.train_sample)
         return self._generate_batches(self.train_sample, apply_mask=True)
 
-    def get_val_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+    def get_val_batches(self) -> Generator[Tuple[gcpu.ndarray, gcpu.ndarray], None, None]:
         """Generates validation batches."""
         return self._generate_batches(self.validation_sample, apply_mask=False)
 
-    def get_test_batches(self) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+    def get_test_batches(self) -> Generator[Tuple[gcpu.ndarray, gcpu.ndarray], None, None]:
         """Generates test batches."""
         return self._generate_batches(self.test_sample, apply_mask=False)

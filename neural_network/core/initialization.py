@@ -1,6 +1,6 @@
 from abc import ABC
 from typing import Union, List
-import numpy as np
+from neural_network.gcpu import gcpu
 import pickle
 import os
 
@@ -10,20 +10,20 @@ class Initialization(ABC):
     def variance() -> Union[int, float]:
         return 1
 
-    def generate_bias(self, layers: List[dict], output_size: int) -> List[np.ndarray]:
-        biases = [np.zeros(hidden_layer['size']) for hidden_layer in layers]
-        biases.append(np.zeros(output_size))
+    def generate_bias(self, layers: List[dict], output_size: int) -> List[gcpu.ndarray]:
+        biases = [gcpu.zeros(hidden_layer['size']) for hidden_layer in layers]
+        biases.append(gcpu.zeros(output_size))
         return biases
     
-    def generate_kernel_bias(self, filters: List[np.ndarray]) -> List[np.ndarray]:
-        biases = [np.zeros(f.shape[0]) for f in filters]
+    def generate_kernel_bias(self, filters: List[gcpu.ndarray]) -> List[gcpu.ndarray]:
+        biases = [gcpu.zeros(f.shape[0]) for f in filters]
         return biases
     
-    def get_filters_options(self, filters_options: List[np.ndarray]) -> List[np.ndarray]:
+    def get_filters_options(self, filters_options: List[gcpu.ndarray]) -> List[gcpu.ndarray]:
         return filters_options
     
-    def generate_filters(self, filters_list: List[dict], input_channels: int) -> List[np.ndarray]:
-        generator = np.random.default_rng(42)
+    def generate_filters(self, filters_list: List[dict], input_channels: int) -> List[gcpu.ndarray]:
+        generator = gcpu.random.default_rng(42)
         filters = []
 
         for filter_config in filters_list:
@@ -33,7 +33,7 @@ class Initialization(ABC):
             fan_in = input_channels * filter_height * filter_width
 
             filters.append(generator.normal(
-                0, np.sqrt(2.0 / fan_in),
+                0, gcpu.sqrt(2.0 / fan_in),
                 (filter_number, input_channels, filter_height, filter_width)
             ))
 

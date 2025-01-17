@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-import numpy as np
+from neural_network.gcpu import gcpu
 
 class Optimizer(ABC):
     
@@ -8,7 +8,7 @@ class Optimizer(ABC):
         self._learning_rate = learning_rate
         
     @abstractmethod
-    def update(self, param_name: str, param: np.ndarray, grad: np.ndarray) -> np.ndarray:
+    def update(self, param_name: str, param: gcpu.ndarray, grad: gcpu.ndarray) -> gcpu.ndarray:
         pass
     
     def set_learning_rate(self, lr: float) -> None:

@@ -3,7 +3,7 @@ from tkinter import filedialog, messagebox
 from neural_network.board.drawable import Drawable
 from PIL import Image, ImageTk
 from typing import Tuple
-import numpy as np
+from neural_network.gcpu import gcpu
 import os
 
 class FileInput(Drawable):
@@ -36,7 +36,7 @@ class FileInput(Drawable):
         if self.selected_file_path:
             try:
                 handler = self.get_handler()
-                result = handler(np.array([self.get_image_as_matrix()]) / 255.00)
+                result = handler(gcpu.array([self.get_image_as_matrix()]) / 255.00)
                 label = self.get_label(result)
                 messagebox.showinfo("Analise completa", f"{label}!")
             except Exception as e:
@@ -45,7 +45,7 @@ class FileInput(Drawable):
     def get_image_as_matrix(self):
         image = Image.open(self.selected_file_path).convert('RGB')
         image = image.resize(self.image_size)
-        return np.transpose(image, (2, 0, 1))
+        return gcpu.transpose(image, (2, 0, 1))
     
     def draw(self):
         self.root = tk.Tk()

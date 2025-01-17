@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from neural_network.train.base_trainer import BaseTrainer
 from neural_network.core.processor import Processor
 from neural_network.core.tester import Tester
-import numpy as np
+from neural_network.gcpu import gcpu
 
 class BaseNetwork(ABC):
     def set_training_mode(self) -> None:
@@ -12,19 +12,19 @@ class BaseNetwork(ABC):
         self._mode = 'test'
         
     @abstractmethod
-    def forward(self, x: np.ndarray):
+    def forward(self, x: gcpu.ndarray):
         pass
 
     @abstractmethod
-    def backward(self, x: np.ndarray, y: np.ndarray, output: np.ndarray):
+    def backward(self, x: gcpu.ndarray, y: gcpu.ndarray, output: gcpu.ndarray):
         pass
 
     @abstractmethod
-    def train(self, x_batch: np.ndarray, y_batch: np.ndarray):
+    def train(self, x_batch: gcpu.ndarray, y_batch: gcpu.ndarray):
         pass
 
     @abstractmethod
-    def predict(self, x: np.ndarray):
+    def predict(self, x: gcpu.ndarray):
         pass
 
     def get_processor(self) -> "Processor": 
@@ -49,13 +49,13 @@ class BaseNetwork(ABC):
     def get_output_size(self) -> int:
         return self.output.get('size')
 
-    def get_output_loss(self, x: np.ndarray, z: np.ndarray) -> np.ndarray:
+    def get_output_loss(self, x: gcpu.ndarray, z: gcpu.ndarray) -> gcpu.ndarray:
         return self.output.get('activation').loss(x, z)
     
-    def get_output_accuracy(self, x: np.ndarray, z: np.ndarray):
+    def get_output_accuracy(self, x: gcpu.ndarray, z: gcpu.ndarray):
         return self.output.get('activation').accuracy(x, z)
     
-    def _apply_dropout(self, activations: np.ndarray, rate: float) -> np.ndarray:
+    def _apply_dropout(self, activations: gcpu.ndarray, rate: float) -> gcpu.ndarray:
         retain_prob = 1 - rate
         mask = self.rng.random(size=activations.shape) < retain_prob
         activations = activations * mask

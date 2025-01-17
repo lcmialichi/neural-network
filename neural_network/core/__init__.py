@@ -5,4 +5,3 @@ from .cnn_network import CnnNetwork
 from .base_network import BaseNetwork
 from.label_loader import LabelLoader
 from .padding import Padding
-from .optimizer import Optimizer

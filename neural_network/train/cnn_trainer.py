@@ -37,7 +37,8 @@ class CnnTrainer(BaseTrainer):
             epoch_loss /= num_batches
             epoch_accuracy /= num_batches
             total_time = progress_bar.format_dict["elapsed"]
-
+            self._model.save_state()
+            
             print(
                 f"\033[1;32mEpoch {epoch+1}/{epochs} (avg)\033[0m"
                 f" - \033[1;34mLoss\033[0m: {epoch_loss:.4f}, "

@@ -6,9 +6,9 @@ from neural_network.activations import Relu
 from neural_network.activations import Softmax
 from neural_network.core.processor import Processor
 from neural_network.storage import Storage
-from neural_network.core import Optimizer
+from neural_network.core.optimizer import Optimizer
 from typing import Union
-import numpy as np
+from neural_network.gcpu import gcpu
 
 class CnnConfiguration:
     def __init__(self, config: dict = None, storage: Union[None, Storage] = None):
@@ -103,10 +103,10 @@ class CnnConfiguration:
         num_filters =  self._config['filters'][-1]['number']
         
         self._config['filters'][-1]['bn'] = {
-            'gamma': np.ones((1, num_filters, 1, 1)) * gama,
-            'beta': np.zeros((1, num_filters, 1, 1)) + beta,
-            'running_mean': np.zeros((1, num_filters, 1, 1)),
-            'running_var': np.ones((1, num_filters, 1, 1)),
+            'gamma': gcpu.ones((1, num_filters, 1, 1)) * gama,
+            'beta': gcpu.zeros((1, num_filters, 1, 1)) + beta,
+            'running_mean': gcpu.zeros((1, num_filters, 1, 1)),
+            'running_var': gcpu.ones((1, num_filters, 1, 1)),
             'momentum': momentum 
         }
         
