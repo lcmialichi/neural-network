@@ -14,7 +14,6 @@ class DenseNetwork(BaseNetwork):
         self.hidden_layers: int = config.get('hidden_layers', [])
         self.output: dict = config.get('output')
         self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
-        self.dropout_rate: float = config.get('dropout', 0.0)
         self.layers_number: int = len(self.hidden_layers)
         self.rng = gcpu.random.default_rng(42)
     

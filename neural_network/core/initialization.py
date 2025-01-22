@@ -40,3 +40,14 @@ class Initialization(ABC):
             input_channels = filter_number
 
         return filters
+
+    def kernel_filters(self, filter_number: int, filter_shape: tuple[int, int], channels_number: int) -> gcpu.ndarray:
+        generator = gcpu.random.default_rng(42)
+        fan_in = channels_number * filter_shape[0] * filter_shape[1]
+        return generator.normal(
+            0, gcpu.sqrt(2.0 / fan_in),
+            (filter_number, channels_number, filter_shape[0],  filter_shape[1])
+        )
+    
+    def kernel_bias(self, number: int) -> gcpu.ndarray:
+        return gcpu.zeros(number)

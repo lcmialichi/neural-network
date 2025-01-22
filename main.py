@@ -12,6 +12,7 @@ from neural_network.activations import Softmax
 from neural_network.core.image_processor import ImageProcessor
 from neural_network.scheduler import ReduceLROnPlateau
 from neural_network.optimizers import Adam
+from neural_network.foundation.kernel import Kernel
 
 def create_configuration():
     config = CnnConfiguration({
@@ -46,24 +47,25 @@ def create_configuration():
     config.padding_type(Padding.SAME)
     
     # first layer
-    config.add_filter(filter_number=64, filter_shape=(3, 3), activation=Relu(), stride=1)
-    config.add_polling(polling_shape=(2, 2), stride=2)
-    config.add_batch_normalization()
+    kernel: Kernel = config.add_kernel(number=8, shape=(6, 6), stride=1)
+    kernel.activation(Relu())
+    kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.batch_normalization()
     
     # second layer
-    config.add_filter(filter_number=128, filter_shape=(3, 3), activation=Relu(), stride=1)
-    config.add_polling(polling_shape=(2, 2), stride=2)
-    config.add_batch_normalization()
+    kernel: Kernel = config.add_kernel(number=16, shape=(3, 3), stride=1)
+    kernel.activation(Relu())
+    kernel.batch_normalization()
     
     # third layer
-    config.add_filter(filter_number=256, filter_shape=(3, 3), activation=Relu(), stride=1)
-    config.add_polling(polling_shape=(2, 2), stride=2)
-    config.add_batch_normalization()
+    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    kernel.activation(Relu())
+    kernel.batch_normalization()
 
     # fourth layer
-    config.add_filter(filter_number=512, filter_shape=(3, 3), activation=Relu(), stride=1)
-    config.add_polling(polling_shape=(2, 2), stride=2)
-    config.add_batch_normalization()
+    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    kernel.activation(Relu())
+    kernel.batch_normalization()
     
     # dense layers
     config.add_hidden_layer(size=512 , activation=LeakyRelu(), dropout=0.4)

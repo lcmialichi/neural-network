@@ -7,6 +7,7 @@ from neural_network.activations import Softmax
 from neural_network.core.processor import Processor
 from neural_network.storage import Storage
 from neural_network.core.optimizer import Optimizer
+from neural_network.foundation.kernel import Kernel
 from typing import Union
 from neural_network.gcpu import gcpu
 
@@ -19,6 +20,7 @@ class CnnConfiguration:
         self._config: dict = config
         self._config['hidden_layers'] = self._config.get('hidden_layers', [])
         self._config['filters'] = self._config.get('filters', [])
+        self._config['kernels'] = self._config.get('kernels', [])
     
     def with_cache(self, path: str) -> "CnnConfiguration":
         self._storage = Storage(path)
@@ -78,7 +80,8 @@ class CnnConfiguration:
         return self
 
     def add_filter(
-        self, filter_number: int, 
+        self, 
+        filter_number: int, 
         filter_shape: tuple[int, int] = (3, 3),
         stride: int = 1,
         activation: Activation = Relu(),
@@ -95,6 +98,12 @@ class CnnConfiguration:
         })
 
         return self
+    
+    def add_kernel(self, number: int, shape: tuple[int, int] = (3, 3), stride: int = 1) -> "Kernel":
+        assert stride == 1, "not working with stride > 1 yet"
+        kernel = Kernel(number=number, shape=shape, stride=stride)
+        self._config['kernels'].append(kernel)
+        return kernel
     
     def add_batch_normalization(self, gama: float = 1.0, beta: float = 0.0, momentum: float = 0.9 )-> "CnnConfiguration":
         assert len(self._config['filters']) > 0
