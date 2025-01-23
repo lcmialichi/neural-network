@@ -12,7 +12,10 @@ from neural_network.activations import Softmax
 from neural_network.core.image_processor import ImageProcessor
 from neural_network.scheduler import ReduceLROnPlateau
 from neural_network.optimizers import Adam
-from neural_network.foundation.kernel import Kernel
+from neural_network.foundation import Kernel
+from neural_network.foundation import Output
+from neural_network.foundation import HiddenLayer
+from neural_network.loss import CrossEntropyLoss
 
 def create_configuration():
     config = CnnConfiguration({
@@ -40,38 +43,44 @@ def create_configuration():
     
     # cache model state
     config.with_cache(path="./data/cache/model2.pkl")
-    
     config.set_global_optimizer(Adam(learning_rate=0.001))
-    
-    config.with_initializer(He())
     config.padding_type(Padding.SAME)
     
     # first layer
-    kernel: Kernel = config.add_kernel(number=8, shape=(6, 6), stride=1)
+    kernel: Kernel = config.add_kernel(number=8, shape=(7, 7), stride=2)
+    kernel.initializer(He())
     kernel.activation(Relu())
     kernel.max_pooling(shape=(2, 2), stride=2)
     kernel.batch_normalization()
     
-    # second layer
+    # # second layer
     kernel: Kernel = config.add_kernel(number=16, shape=(3, 3), stride=1)
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    
-    # third layer
-    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    kernel.initializer(He())
+    kernel.max_pooling(shape=(2, 2), stride=2)
     kernel.activation(Relu())
     kernel.batch_normalization()
 
-    # fourth layer
-    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    # # third layer
+    kernel: Kernel = config.add_kernel(number=32, shape=(2, 2), stride=1)
+    kernel.initializer(He())
+    kernel.max_pooling(shape=(2, 2), stride=2)
     kernel.activation(Relu())
     kernel.batch_normalization()
+
+    # # fourth layer
+    # kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    # kernel.activation(Relu())
     
     # dense layers
-    config.add_hidden_layer(size=512 , activation=LeakyRelu(), dropout=0.4)
+    layer: HiddenLayer = config.add_hidden_layer(size=512, dropout=0.4)
+    layer.activation(LeakyRelu())
+    layer.initializer(He())
     
     # output
-    config.output(size=2, activation=Softmax())
+    output: Output = config.output(size=2)
+    output.activation(Softmax())
+    output.initializer(He())
+    config.loss_function(CrossEntropyLoss())
     
     return config
 

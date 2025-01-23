@@ -44,7 +44,6 @@ class BatchNormalization:
     def batch_norm_backward(self, dout) -> gcpu.ndarray:
         x, x_hat, mean, var, gamma = self.cached_bn
         N, _, H, W = x.shape
-
         dgamma = gcpu.sum(dout * x_hat, axis=(0, 2, 3), keepdims=True)
         dbeta = gcpu.sum(dout, axis=(0, 2, 3), keepdims=True)
 

@@ -7,10 +7,12 @@ class MaxPooling(Pooling):
         self.shape = shape
         self.stride = stride
         self.cached_pooling_indexes = None
+        self.input_shape = None
 
     def apply_pooling(self, input):
         batch_size, channels, height, width = input.shape
         
+        self.input_shape = (height, width)
         output_height = (height  - self.shape[0]) // self.stride + 1
         output_width = (width  - self.shape[1]) // self.stride + 1
 
@@ -34,21 +36,23 @@ class MaxPooling(Pooling):
 
         return max_vals
     
-    def unpooling(self, grad, shape: tuple[int, int]):
+    def unpooling(self, grad):
         pool_cache = self.cached_pooling_indexes
         batch_size, channels, _, _ = grad.shape
-        unpooled_grad = gcpu.zeros((batch_size, channels, shape[0], shape[1]))
+
+        unpooled_grad = gcpu.zeros((batch_size, channels, self.input_shape[0], self.input_shape[1]))
         
         batch_indices, channel_indices = gcpu.meshgrid(
             gcpu.arange(batch_size), gcpu.arange(channels), indexing="ij"
         )
         
-        row_indices = gcpu.clip(pool_cache[..., 0], 0, shape[0] - 1)
-        col_indices = gcpu.clip(pool_cache[..., 1], 0, shape[1] - 1)
+        row_indices = gcpu.clip(pool_cache[..., 0], 0, self.input_shape[0] - 1)
+        col_indices = gcpu.clip(pool_cache[..., 1], 0, self.input_shape[1] - 1)
 
         batch_indices = batch_indices[..., None, None]
         channel_indices = channel_indices[..., None, None]
 
+        # Preenche a matriz de gradientes com base nos índices de pooling
         unpooled_grad[batch_indices, channel_indices, row_indices, col_indices] = grad
 
         return unpooled_grad

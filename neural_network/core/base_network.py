@@ -3,13 +3,20 @@ from neural_network.train.base_trainer import BaseTrainer
 from neural_network.core.processor import Processor
 from neural_network.core.tester import Tester
 from neural_network.gcpu import gcpu
+from neural_network.loss import LossFunction
+from types import UnionType
 
 class BaseNetwork(ABC):
+    loss_function: LossFunction | None = None
+
     def set_training_mode(self) -> None:
         self._mode = 'train'
     
     def set_test_mode(self) -> None:
         self._mode = 'test'
+
+    def is_trainning(self) -> bool:
+        return self._mode in 'train'
         
     @abstractmethod
     def forward(self, x: gcpu.ndarray):
@@ -34,7 +41,7 @@ class BaseNetwork(ABC):
         self._processor = processor
         
     def get_learning_rate(self) -> float: 
-        self.global_optimizer.get_learning_rate()
+        return self.global_optimizer.get_learning_rate()
     
     def set_learning_rate(self, val: float) -> None:
         self.global_optimizer.set_learning_rate(val)
@@ -50,10 +57,10 @@ class BaseNetwork(ABC):
         return self.output.get('size')
 
     def get_output_loss(self, x: gcpu.ndarray, z: gcpu.ndarray) -> gcpu.ndarray:
-        return self.output.get('activation').loss(x, z)
+        return self.loss_function.loss(x, z)
     
     def get_output_accuracy(self, x: gcpu.ndarray, z: gcpu.ndarray):
-        return self.output.get('activation').accuracy(x, z)
+        return self.loss_function.accuracy(x, z)
     
     def _apply_dropout(self, activations: gcpu.ndarray, rate: float) -> gcpu.ndarray:
         retain_prob = 1 - rate
