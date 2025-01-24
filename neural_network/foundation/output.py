@@ -29,7 +29,7 @@ class Output:
         return self._loss_function
     
     def has_loss_function(self) -> bool:
-        return self._aloss_function is not None
+        return self._loss_function is not None
     
     def bias(self):
         return self._bias
@@ -38,7 +38,7 @@ class Output:
         self._bias = bias
     
     def weights(self):
-        return self._bias
+        return self._weights
     
     def update_weights(self, weights):
         self._weights = weights
@@ -56,5 +56,5 @@ class Output:
         self._optimizer = optimizer
 
     def initialize(self, input_size: int) -> None:
-        self._filters = self._initializer.generate_layer(input_size, self.size)
+        self._weights = self._initializer.generate_layer(input_size, self.size)
         self._bias = self._initializer.generate_layer_bias(self.size)

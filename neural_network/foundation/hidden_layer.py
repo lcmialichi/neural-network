@@ -64,11 +64,11 @@ class HiddenLayer:
         self._bias = bias
     
     def weights(self):
-        return self._bias
+        return self._weights
     
     def update_weights(self, weights):
         self._weights = weights
         
     def initialize(self, input_size: int) -> None:
-        self._filters = self._initializer.generate_layer(input_size, self.size)
+        self._weights = self._initializer.generate_layer(input_size, self.size)
         self._bias = self._initializer.generate_layer_bias(self.size)

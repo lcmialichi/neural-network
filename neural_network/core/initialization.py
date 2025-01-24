@@ -17,7 +17,7 @@ class Initialization(ABC):
         return gcpu.zeros(size)
     
     def kernel_filters(self, filter_number: int, filter_shape: tuple[int, int], channels_number: int) -> gcpu.ndarray:
-        generator = gcpu.random.default_rng(42)
+        generator = np.random
         fan_in = channels_number * filter_shape[0] * filter_shape[1]
         return generator.normal(
             0, gcpu.sqrt(2.0 / fan_in),

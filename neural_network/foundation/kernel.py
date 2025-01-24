@@ -5,6 +5,7 @@ from neural_network.initializations import He
 from neural_network.normalization import BatchNormalization
 from neural_network.pooling.max_pooling import MaxPooling
 from neural_network.core.pooling import Pooling
+from typing import Callable
 
 class Kernel:
     def __init__(self,  number: int, shape: tuple[int, int] = (3, 3), stride: int = 1):
@@ -83,3 +84,8 @@ class Kernel:
     def initialize(self, channels: int) -> None:
         self._filters = self._initializer.kernel_filters(self.number, self.shape, channels)
         self._bias = self._initializer.kernel_bias(self.number)
+        
+    def tap(self, callback: Callable[["Kernel"], None]):
+        if callable(callback):
+            callback(self)
+        return self

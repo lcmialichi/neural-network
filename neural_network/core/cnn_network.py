@@ -1,10 +1,8 @@
 from neural_network.gcpu import gcpu
 from neural_network.core.dense_network import DenseNetwork
 from neural_network.foundation.kernel import Kernel
-from neural_network.initializations import Xavier
 from neural_network.train import CnnTrainer
 from neural_network.core.padding import Padding
-from neural_network.core import Initialization
 from neural_network.storage import Storage
 from typing import Union
 from neural_network.support import im2col
@@ -20,7 +18,6 @@ class CnnNetwork(DenseNetwork):
         assert config.get('processor') is not None, "Processor not defined"
         self.set_processor(config.get('processor'))
         
-        self.initializer: Initialization = config.get('initializer', Xavier())
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
 
@@ -31,7 +28,7 @@ class CnnNetwork(DenseNetwork):
             kernel_channel = kernel.number
 
         config['input_size'] = self._calculate_input_size(self.input_shape, self._kernels)
-        super().__init__(config, initializer=self.initializer)
+        super().__init__(config)
 
     def forward(self, x):
         self._reset_caches()
@@ -141,7 +138,7 @@ class CnnNetwork(DenseNetwork):
         filter_gradients = self._compute_filter_gradients(x, delta_conv)
 
         for i, kernel in enumerate(self._kernels):
-            optimizer = kernel.get_optimizer() or self.global_optimizer
+            optimizer = kernel.get_optimizer() or self._global_optimizer
             kernel.update_filters(optimizer.update(f"kernel_{i}", kernel.filters(), filter_gradients[i]))
 
         return dense_deltas
@@ -155,7 +152,7 @@ class CnnNetwork(DenseNetwork):
             filters = kernel.filters()
             num_filters, input_channels, fh, fw = filters.shape
             conv = self.cached_convolutions[i]
-            optimizer = kernel.get_optimizer() or self.global_optimizer
+            optimizer = kernel.get_optimizer() or self._global_optimizer
 
             if kernel.has_activation():
                 delta_conv *= kernel.get_activation().derivate(conv)

@@ -7,10 +7,5 @@ class Softmax(Activation):
         return exp_z / gcpu.sum(exp_z, axis=1, keepdims=True)
 
     def derivate(self, x, alpha = None):
-        raise RuntimeError('softmax derivative not implemented yet')
+        return x
     
-    def loss(self, y_pred, y_true):
-        return -gcpu.mean(gcpu.sum(y_true * gcpu.log(y_pred + 1e-9), axis=1))
-    
-    def accuracy(self, y_pred, y_true):
-        return gcpu.mean(gcpu.argmax(y_pred, axis=1) == gcpu.argmax(y_true, axis=1))
