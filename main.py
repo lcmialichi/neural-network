@@ -4,14 +4,14 @@ from neural_network.app import App
 from neural_network.board import Chart
 from neural_network.initializations import He
 from neural_network.configuration import CnnConfiguration
-from neural_network.activations import LeakyRelu, Relu, Softmax
+from neural_network.activations import LeakyRelu, Relu, Softmax, Sigmoid
 from neural_network.board import FileInput
 from neural_network.core import Padding
 from neural_network.core.image_processor import ImageProcessor
 from neural_network.scheduler import ReduceLROnPlateau
 from neural_network.optimizers import Adam
 from neural_network.foundation import Kernel, Output, HiddenLayer
-from neural_network.loss import CrossEntropyLoss
+from neural_network.loss import CrossEntropyLoss, BinaryCrossEntropyLoss
 
 def create_configuration():
     config = CnnConfiguration({
@@ -54,49 +54,49 @@ def create_configuration():
     kernel.batch_normalization()
     kernel.max_pooling(shape=(2, 2), stride=2)
 
-    # Block 2
-    kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel.max_pooling(shape=(2, 2), stride=2)
+    # # Block 2
+    # kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel.max_pooling(shape=(2, 2), stride=2)
 
-    # Block 3
-    kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel.max_pooling(shape=(2, 2), stride=2)
+    # # Block 3
+    # kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel.max_pooling(shape=(2, 2), stride=2)
 
-    # Block 4
-    kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel.max_pooling(shape=(2, 2), stride=2)
+    # # Block 4
+    # kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel.max_pooling(shape=(2, 2), stride=2)
 
-    # Block 5
-    kernel: Kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel: Kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel.max_pooling(shape=(2, 2), stride=2)
+    # # Block 5
+    # kernel: Kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel: Kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
+    # kernel.initializer(He())
+    # kernel.activation(Relu())
+    # kernel.batch_normalization()
+    # kernel.max_pooling(shape=(2, 2), stride=2)
 
     # Fully connected layers
     layer: HiddenLayer = config.add_hidden_layer(size=1024, dropout=0.5)
@@ -113,9 +113,9 @@ def create_configuration():
 
     # Output layer
     output: Output = config.output(size=2)
-    output.activation(Softmax())
+    output.activation(Sigmoid())
     output.initializer(He())
-    output.loss_function(CrossEntropyLoss())
+    output.loss_function(BinaryCrossEntropyLoss())
 
     return config
 

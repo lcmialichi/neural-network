@@ -8,10 +8,3 @@ class Sigmoid(Activation):
     def derivate(self, x, alpha = None):
         return x * (1 - x)
     
-    def loss(self, y_pred, y_true):
-        epsilon = 1e-9 
-        return -gcpu.mean(y_true * gcpu.log(y_pred + epsilon) + (1 - y_true) * gcpu.log(1 - y_pred + epsilon))  
-      
-    def accuracy(self, y_pred, y_true):
-        predictions = (y_pred > 0.5).astype(int)
-        return gcpu.mean(predictions == y_true)

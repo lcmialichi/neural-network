@@ -3,7 +3,7 @@ from neural_network.core.optimizer import Optimizer
 
 class Adam(Optimizer):
     def __init__(self, learning_rate=0.001, beta1=0.95, beta2=0.98, epsilon=1e-8):
-        self.learning_rate = learning_rate
+        super().__init__(learning_rate)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon

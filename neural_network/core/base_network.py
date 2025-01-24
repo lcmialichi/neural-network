@@ -66,7 +66,7 @@ class BaseNetwork(ABC):
     def _apply_dropout(self, activations: gcpu.ndarray, rate: float) -> gcpu.ndarray:
         retain_prob = 1 - rate
         
-        mask = np.random.random(size=activations.shape) < retain_prob
+        mask = gcpu.random.random(size=activations.shape) < retain_prob
         activations = activations * mask
         activations /= retain_prob
         return activations
