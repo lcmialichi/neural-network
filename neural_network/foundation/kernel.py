@@ -3,7 +3,7 @@ from neural_network.core import Activation
 from neural_network.core import Initialization
 from neural_network.initializations import He
 from neural_network.normalization import BatchNormalization
-from neural_network.pooling.max_pooling import MaxPooling
+from neural_network.pooling import MaxPooling, AvgPooling
 from neural_network.core.pooling import Pooling
 from typing import Callable
 
@@ -50,6 +50,9 @@ class Kernel:
 
     def max_pooling(self, shape: tuple[int, int] = (2, 2), stride: int = 1):
         self._pooling = MaxPooling(shape=shape, stride=stride)
+    
+    def avg_pooling(self, shape: tuple[int, int] = (2, 2), stride: int = 1):
+        self._pooling = AvgPooling(shape=shape, stride=stride)
 
     def activation(self, activation: Activation):
         self._activation = activation

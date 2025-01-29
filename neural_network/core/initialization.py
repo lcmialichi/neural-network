@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Union, List
 from neural_network.gcpu import gcpu
-import pickle
-import os
 
 class Initialization(ABC):
     @staticmethod
@@ -14,7 +12,7 @@ class Initialization(ABC):
         pass
 
     def generate_layer_bias(self, size: int) -> List[gcpu.ndarray]:
-        return gcpu.zeros(size)
+        return gcpu.zeros(size) * 0.1
     
     def kernel_filters(self, filter_number: int, filter_shape: tuple[int, int], channels_number: int) -> gcpu.ndarray:
         generator = gcpu.random
@@ -25,4 +23,4 @@ class Initialization(ABC):
         )
     
     def kernel_bias(self, number: int) -> gcpu.ndarray:
-        return gcpu.zeros(number)
+        return gcpu.zeros(number) * 0.1

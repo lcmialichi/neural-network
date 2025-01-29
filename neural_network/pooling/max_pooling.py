@@ -52,7 +52,6 @@ class MaxPooling(Pooling):
         batch_indices = batch_indices[..., None, None]
         channel_indices = channel_indices[..., None, None]
 
-        # Preenche a matriz de gradientes com base nos índices de pooling
         unpooled_grad[batch_indices, channel_indices, row_indices, col_indices] = grad
 
         return unpooled_grad

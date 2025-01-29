@@ -1,1 +1,1 @@
-from .img_2_col import im2col
+from .image import im2col, col2im

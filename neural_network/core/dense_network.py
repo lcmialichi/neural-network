@@ -14,11 +14,12 @@ class DenseNetwork(BaseNetwork):
     hidden_outputs: list = []
 
     def __init__(self, config: dict):
+        
         self._global_optimizer = config.get('global_optimizer', Adam(learning_rate=0.01))
         self._output: Output = config.get('output')
-        self.regularization_lambda: float = config.get('regularization_lambda', 0.01)
+        self.regularization_lambda: float = config.get('regularization_lambda', 0.001)
         self._hidden_layers: list[HiddenLayer] = config.get('hidden_layers', [])
-        self.loss_function = config.get('loss_function')
+        
         input_size = config.get('input_size', 0)
         for layer in self._hidden_layers:
             layer.initialize(input_size)
@@ -49,7 +50,7 @@ class DenseNetwork(BaseNetwork):
     def backward(self, x: gcpu.ndarray, y: gcpu.ndarray, output: gcpu.ndarray):
         if not self._output.has_loss_function():
             raise RuntimeError('ouput loss function not defined')
-            
+        
         deltas = [self._output.get_loss_function().gradient(output, y)]
 
         layer_error = deltas[-1].dot(self._output.weights().T)
@@ -98,5 +99,4 @@ class DenseNetwork(BaseNetwork):
         return self.forward(x)
 
     def get_trainer(self):
-        
         return DenseTrainer(self)

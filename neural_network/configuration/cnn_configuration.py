@@ -19,7 +19,6 @@ class CnnConfiguration:
         self._storage = storage
         self._config: dict = config
         self._config['hidden_layers'] = self._config.get('hidden_layers', [])
-        self._config['filters'] = self._config.get('filters', [])
         self._config['kernels'] = self._config.get('kernels', [])
 
     

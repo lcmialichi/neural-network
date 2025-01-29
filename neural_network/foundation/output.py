@@ -4,14 +4,16 @@ from neural_network.core import Initialization
 from neural_network.core.optimizer import Optimizer
 
 class Output:
+    
+    _activation: None | Activation = None
+    _loss_function: None | LossFunction = None
+    _initializer: None | Initialization = None
+    _optimizer: None | Optimizer = None
+    _bias: list = []
+    _weights: list = []
+    
     def __init__(self, size: int):
         self.size = size
-        self._activation: None | Activation = None
-        self._loss_function: None | LossFunction = None
-        self._initializer: None | Initialization = None
-        self._optimizer: None | Optimizer = None
-        self._bias: list = []
-        self._weights: list = []
 
     def activation(self, activation: Activation):
         self._activation = activation

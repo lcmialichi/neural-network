@@ -17,7 +17,6 @@ def create_configuration():
     config = CnnConfiguration({
         'input_shape': (3, 100, 100),
         'regularization_lambda': 0.0001,
-        'optimize': True
     })
 
     # Processor for test, validation, and training
@@ -25,7 +24,7 @@ def create_configuration():
         ImageProcessor(
             base_dir="./data/breast-histopathology-images",
             image_size=(100, 100),
-            batch_size=64,
+            batch_size=8,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
             rotation_range=15,
@@ -44,75 +43,23 @@ def create_configuration():
 
     # Convolutional blocks
     # Block 1
-    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    kernel: Kernel = config.add_kernel(number=8, shape=(7, 7), stride=1)
     kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
+    kernel.activation(LeakyRelu())
     kernel.max_pooling(shape=(2, 2), stride=2)
-
-    # # Block 2
-    # kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel.max_pooling(shape=(2, 2), stride=2)
-
-    # # Block 3
-    # kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel.max_pooling(shape=(2, 2), stride=2)
-
-    # # Block 4
-    # kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel.max_pooling(shape=(2, 2), stride=2)
-
-    # # Block 5
-    # kernel: Kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel: Kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
-    # kernel.initializer(He())
-    # kernel.activation(Relu())
-    # kernel.batch_normalization()
-    # kernel.max_pooling(shape=(2, 2), stride=2)
+    
+    kernel: Kernel = config.add_kernel(number=8, shape=(3, 3), stride=1)
+    kernel.initializer(He())
+    kernel.activation(Relu())
+    kernel.batch_normalization()
 
     # Fully connected layers
-    layer: HiddenLayer = config.add_hidden_layer(size=1024, dropout=0.5)
-    layer.activation(LeakyRelu())
-    layer.initializer(He())
-
-    layer: HiddenLayer = config.add_hidden_layer(size=512, dropout=0.5)
-    layer.activation(LeakyRelu())
-    layer.initializer(He())
-
     layer: HiddenLayer = config.add_hidden_layer(size=256, dropout=0.5)
     layer.activation(LeakyRelu())
     layer.initializer(He())
 
     # Output layer
-    output: Output = config.output(size=2)
+    output: Output = config.output(size=1)  
     output.activation(Sigmoid())
     output.initializer(He())
     output.loss_function(BinaryCrossEntropyLoss())

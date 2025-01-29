@@ -8,12 +8,12 @@ from typing import Union
 from neural_network.support import im2col
 
 class CnnNetwork(DenseNetwork):
+    
+    cached_convolutions: list = []
+    
     def __init__(self, config: dict, storage: Union[None, Storage]):
         self._mode = 'test'
         self._storage = storage
-        self.cached_convolutions = []
-        self.cached_pooling_indexes = []
-        self.cached_bn = []
 
         assert config.get('processor') is not None, "Processor not defined"
         self.set_processor(config.get('processor'))
@@ -23,6 +23,7 @@ class CnnNetwork(DenseNetwork):
 
         kernel_channel = self.input_shape[0]
         self._kernels: list[Kernel] = config.get('kernels', [])
+        
         for kernel in self._kernels:
             kernel.initialize(kernel_channel)
             kernel_channel = kernel.number
@@ -37,8 +38,6 @@ class CnnNetwork(DenseNetwork):
 
     def _reset_caches(self):
         self.cached_convolutions.clear()
-        self.cached_pooling_indexes.clear()
-        self.cached_bn.clear()
 
     def _apply_convolutions(self, x):
         output = x
@@ -103,7 +102,7 @@ class CnnNetwork(DenseNetwork):
         pad_y = padding[1][0] + padding[1][1]
         output_height = gcpu.ceil(height + pad_x - filter_shape[0]) // stride + 1
         output_width = gcpu.ceil(width + pad_y - filter_shape[1]) // stride + 1
-        return output_height, output_width
+        return int(output_height), int(output_width)
 
     def _add_padding(self, input_layer, padding: tuple[tuple[int, int], tuple[int, int]]) -> gcpu.ndarray:
         return gcpu.pad(
@@ -145,9 +144,9 @@ class CnnNetwork(DenseNetwork):
 
     def _compute_filter_gradients(self, x, delta_conv):
         filter_gradients = []
-
         for i in range(len(self._kernels) - 1, -1, -1):
             kernel = self._kernels[i]
+            
             input_layer = x if i == 0 else self.cached_convolutions[i - 1]
             filters = kernel.filters()
             num_filters, input_channels, fh, fw = filters.shape
@@ -159,7 +158,6 @@ class CnnNetwork(DenseNetwork):
 
             grad_bias = gcpu.sum(delta_conv, axis=(0, 2, 3))
             kernel.update_bias(optimizer.update(f"kernel_bias_{i}", kernel.bias(), grad_bias))
-
             padding = self._get_padding(
                 (input_layer.shape[2], input_layer.shape[3]), (fh, fw), kernel.stride
             )
@@ -178,13 +176,13 @@ class CnnNetwork(DenseNetwork):
             input_reshaped = im2col(input_padded, (fh, fw), kernel.stride)
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
             grad_filter = gcpu.dot(delta_reshaped.T, input_reshaped).reshape(filters.shape)
-            filter_gradients.append(grad_filter)
             grad_filter += self.regularization_lambda * filters
-
+            grad_filter = gcpu.clip(grad_filter, -1e2, 1e2)
+            filter_gradients.append(grad_filter)
             delta_col = delta_reshaped @ gcpu.flip(filters.reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
-
+      
         filter_gradients.reverse()
         return filter_gradients
 

@@ -6,5 +6,4 @@ class He(Initialization):
         generator = gcpu.random
         stddev = gcpu.sqrt(2 / input_size)
         return generator.normal(0, stddev, size=(input_size, size))
-
-        
+    

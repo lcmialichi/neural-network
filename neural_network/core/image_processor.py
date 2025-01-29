@@ -50,12 +50,9 @@ class ImageProcessor(Processor):
         """Loads an image from the path and applies transformations."""
         try:
             image = Image.open(image_path).convert('RGB')
-
-            # Random rotation
             if apply_mask:
                 image = self._apply_mask(image)
 
-            # Resize and normalize to CHW format
             img_data = gcpu.array(image.resize(self.image_size))
             img_data = gcpu.transpose(img_data, (2, 0, 1))
             return img_data
