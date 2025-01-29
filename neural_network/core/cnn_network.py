@@ -21,7 +21,7 @@ class CnnNetwork(DenseNetwork):
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
         self._kernels: list[Kernel] = config.get('kernels', [])
-        self._initialize_kernels()
+        self._initialize_kernels(self.input_shape[0])
         config['input_size'] = self._calculate_input_size(self.input_shape, self._kernels)
         super().__init__(config)
 
@@ -30,8 +30,7 @@ class CnnNetwork(DenseNetwork):
         convoluted = self._apply_convolutions(x)
         return super().forward(convoluted.reshape(x.shape[0], -1))
 
-    def _initialize_kernels(self) -> None:
-        kernel_channel = self.input_shape[0]
+    def _initialize_kernels(self, kernel_channel: int) -> None:
         for kernel in self._kernels:
             kernel.initialize(kernel_channel)
             kernel_channel = kernel.number
