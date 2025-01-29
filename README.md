@@ -88,36 +88,62 @@ python main.py --mode test --plot
 Below is an example of configuring the CNN:
 
 ```python
-config = CnnConfiguration({
-        'input_shape': (3, 50, 50), # (channels, height, width)
-        'learning_rate': 0.001,
-        'regularization_lambda': 0.0001,
-        'dropout': 0.2,
-        'optimize': True
+ config = CnnConfiguration({
+        'input_shape': (3, 50, 50),
+        'regularization_lambda': 1e-4,
     })
 
-config.with_initializer(He(path="./data/cache/he.pkl"))
-config.padding_type(Padding.SAME)
+    # Processor for test, validation, and training
+    config.set_processor(
+        ImageProcessor(
+            base_dir="./data/breast-histopathology-images",
+            image_size=(50, 50),
+            batch_size=32,
+            split_ratios=(0.7, 0.15, 0.15),
+            shuffle=True,
+            rotation_range=45,
+            rand_horizontal_flip=0.5,
+            rand_vertical_flip=0.5,
+            rand_brightness=0.2,
+            rand_contrast=0.5,
+            rand_crop=0.5
+        )
+    )
 
-# first layer
-config.add_filter(filter_number=32, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
-config.add_polling(polling_shape=(2, 2), stride=2)
+    # Convolutional blocks
+    # Block 1
+    kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    kernel.initializer(He())
+    kernel.activation(LeakyRelu(alpha=0.1))
+    kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.batch_normalization()
+    
+    # Block 2
+    kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
+    kernel.initializer(He())
+    kernel.activation(LeakyRelu(alpha=0.1))
+    kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.batch_normalization()
 
-# second layer
-config.add_filter(filter_number=64, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
+    # Block 3
+    kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
+    kernel.initializer(He())
+    kernel.activation(LeakyRelu(alpha=0.1))
+    kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.batch_normalization()
 
-# third layer
-config.add_filter(filter_number=128, filter_shape=(3, 3), activation=LeakyRelu(), stride=1)
-config.add_polling(polling_shape=(2, 2), stride=2)
-config.add_batch_normalization()
+    # Fully connected layers
+    layer: HiddenLayer = config.add_hidden_layer(size=512, dropout=0.5)
+    layer.activation(LeakyRelu(alpha=0.1))
+    layer.initializer(He())
 
-# dense network layers
-config.add_hidden_layer(size=128, activation=LeakyRelu())
-config.add_hidden_layer(size=256, activation=LeakyRelu())
-config.add_hidden_layer(size=128, activation=LeakyRelu())
+    # Output layer
+    output: Output = config.output(size=2)
+    output.activation(Softmax())
+    output.initializer(He())
+    output.loss_function(CrossEntropyLoss())
 
-# output layer
-config.output(size=2, activation=Softmax())
+    return config
 ```
 
 
