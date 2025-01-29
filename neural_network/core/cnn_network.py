@@ -8,26 +8,20 @@ from typing import Union
 from neural_network.support import im2col
 
 class CnnNetwork(DenseNetwork):
-    
-    cached_convolutions: list = []
+
+    _cached_convolutions: list = []
+    _clogits: list = []
+    _mode: str = 'test'
     
     def __init__(self, config: dict, storage: Union[None, Storage]):
-        self._mode = 'test'
         self._storage = storage
 
-        assert config.get('processor') is not None, "Processor not defined"
         self.set_processor(config.get('processor'))
         
         self.padding_type: Padding = config.get('padding_type', Padding.SAME)
         self.input_shape = config.get('input_shape', (3, 50, 50))
-
-        kernel_channel = self.input_shape[0]
         self._kernels: list[Kernel] = config.get('kernels', [])
-        
-        for kernel in self._kernels:
-            kernel.initialize(kernel_channel)
-            kernel_channel = kernel.number
-
+        self._initialize_kernels()
         config['input_size'] = self._calculate_input_size(self.input_shape, self._kernels)
         super().__init__(config)
 
@@ -36,8 +30,15 @@ class CnnNetwork(DenseNetwork):
         convoluted = self._apply_convolutions(x)
         return super().forward(convoluted.reshape(x.shape[0], -1))
 
+    def _initialize_kernels(self) -> None:
+        kernel_channel = self.input_shape[0]
+        for kernel in self._kernels:
+            kernel.initialize(kernel_channel)
+            kernel_channel = kernel.number
+
     def _reset_caches(self):
-        self.cached_convolutions.clear()
+        self._cached_convolutions.clear()
+        self._clogits.clear()
 
     def _apply_convolutions(self, x):
         output = x
@@ -48,6 +49,7 @@ class CnnNetwork(DenseNetwork):
     def _apply_single_kernel(self, input_layer, kernel: Kernel):
         conv_output = self._apply_single_convolution(input_layer, kernel)
         conv_output += kernel.bias()[:, gcpu.newaxis, gcpu.newaxis]
+        self._clogits.append(conv_output)
 
         if kernel.has_batch_normalization():
             conv_output = kernel.get_batch_normalization().batch_normalize(
@@ -60,7 +62,7 @@ class CnnNetwork(DenseNetwork):
         if kernel.has_pooling():
             conv_output = kernel.get_pooling().apply_pooling(conv_output)
 
-        self.cached_convolutions.append(conv_output)
+        self._cached_convolutions.append(conv_output)
 
         if self.is_trainning() and kernel.has_dropout():
             conv_output = self._apply_dropout(conv_output, kernel.get_dropout())
@@ -130,9 +132,9 @@ class CnnNetwork(DenseNetwork):
 
     def backward(self, x, y, output):
         dense_deltas = super().backward(
-            self.cached_convolutions[-1].reshape(x.shape[0], -1), y, output
+            self._cached_convolutions[-1].reshape(x.shape[0], -1), y, output
         )
-        delta_conv = dense_deltas.reshape(self.cached_convolutions[-1].shape)
+        delta_conv = dense_deltas.reshape(self._cached_convolutions[-1].shape)
 
         filter_gradients = self._compute_filter_gradients(x, delta_conv)
 
@@ -147,23 +149,22 @@ class CnnNetwork(DenseNetwork):
         for i in range(len(self._kernels) - 1, -1, -1):
             kernel = self._kernels[i]
             
-            input_layer = x if i == 0 else self.cached_convolutions[i - 1]
+            input_layer = x if i == 0 else self._cached_convolutions[i - 1]
             filters = kernel.filters()
             num_filters, input_channels, fh, fw = filters.shape
-            conv = self.cached_convolutions[i]
             optimizer = kernel.get_optimizer() or self._global_optimizer
 
+            if kernel.has_pooling():
+                delta_conv = kernel.get_pooling().unpooling(delta_conv)
+
             if kernel.has_activation():
-                delta_conv *= kernel.get_activation().derivate(conv)
+                delta_conv *= kernel.get_activation().derivate(self._clogits[i])
 
             grad_bias = gcpu.sum(delta_conv, axis=(0, 2, 3))
             kernel.update_bias(optimizer.update(f"kernel_bias_{i}", kernel.bias(), grad_bias))
             padding = self._get_padding(
                 (input_layer.shape[2], input_layer.shape[3]), (fh, fw), kernel.stride
-            )
-
-            if kernel.has_pooling():
-                delta_conv = kernel.get_pooling().unpooling(delta_conv)
+            )          
 
             if kernel.has_batch_normalization():
                 bn = kernel.get_batch_normalization()
@@ -177,7 +178,7 @@ class CnnNetwork(DenseNetwork):
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
             grad_filter = gcpu.dot(delta_reshaped.T, input_reshaped).reshape(filters.shape)
             grad_filter += self.regularization_lambda * filters
-            grad_filter = gcpu.clip(grad_filter, -1e2, 1e2)
+            grad_filter = gcpu.clip(grad_filter, -1e1, 1e1)
             filter_gradients.append(grad_filter)
             delta_col = delta_reshaped @ gcpu.flip(filters.reshape(num_filters, -1), axis=1)
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)

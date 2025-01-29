@@ -9,18 +9,18 @@
 - [X] Set dropout rate to multiple layers
 - [X] Update readme file
 - [X] Fix loss and accuracy plot
-- [ ] Add multiple optimizer
+- [X] Add multiple optimizer
 - [X] improve training options
 - [X] add learning rate scheduler
 
 ### Dense Network
 - [X] Create loss and accuracy for each activation defined by the user
-- [ ] Add dynamic derivative in backpropagation for errors other than softmax
-- [ ] Update dense trainer
+- [X] Add dynamic derivative in backpropagation for errors other than softmax
+- [X] Update dense trainer
 
 ### Conv Network
 - [X] Fix max-pooling ``_unpooling`` method (original height and width are incorrect)
 - [X] Add kernel bias to forward and backpropagation
-- [ ] Add different pooling options
-- [ ] refact class porperties
+- [X] Add different pooling options
+- [X] refact class porperties
 

@@ -38,7 +38,8 @@ class BaseNetwork(ABC):
     def get_processor(self) -> "Processor": 
         return self._processor
     
-    def set_processor(self, processor: Processor) -> None: 
+    def set_processor(self, processor: Processor) -> None:
+        assert processor is not None, "Processor not defined"
         self._processor = processor
         
     def get_learning_rate(self) -> float: 

@@ -12,6 +12,7 @@ from neural_network.foundation import Output
 class DenseNetwork(BaseNetwork):
 
     hidden_outputs: list = []
+    dlogits: list = []
 
     def __init__(self, config: dict):
         
@@ -19,20 +20,30 @@ class DenseNetwork(BaseNetwork):
         self._output: Output = config.get('output')
         self.regularization_lambda: float = config.get('regularization_lambda', 0.001)
         self._hidden_layers: list[HiddenLayer] = config.get('hidden_layers', [])
-        
+
         input_size = config.get('input_size', 0)
+        self._initialize_layers(input_size)
+       
+
+    def _initialize_layers(self, input_size: int) -> None:
+        assert input_size > 0, 'input_size must be > 0'
+
         for layer in self._hidden_layers:
             layer.initialize(input_size)
             input_size = layer.size
 
         self._output.initialize(input_size)
 
+
     def forward(self, x: gcpu.ndarray) -> gcpu.ndarray:
-        self.hidden_outputs = []
+        self.hidden_outputs.clear()
+        self.dlogits.clear()
+
         output = x
 
         for layer in self._hidden_layers:
             output = gcpu.dot(output, layer.weights()) + layer.bias()
+            self.dlogits.append(output)
             if layer.has_activation():
                 output = layer.get_activation().activate(output)
 
@@ -55,7 +66,7 @@ class DenseNetwork(BaseNetwork):
 
         layer_error = deltas[-1].dot(self._output.weights().T)
         if self._output.has_activation():
-            layer_error *= self._output.get_activation().derivate(self.hidden_outputs[-1])
+            layer_error *= self._output.get_activation().derivate(self.dlogits[-1])
 
         deltas.append(layer_error)
 
@@ -63,7 +74,7 @@ class DenseNetwork(BaseNetwork):
             layer = self._hidden_layers[i]
             layer_error = deltas[-1].dot(layer.weights().T)
             if layer.has_activation():
-                layer_error *= layer.get_activation().derivate(self.hidden_outputs[i - 1])
+                layer_error *= layer.get_activation().derivate(self.dlogits[i - 1])
 
             deltas.append(layer_error)
 

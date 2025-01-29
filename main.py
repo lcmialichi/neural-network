@@ -13,56 +13,75 @@ from neural_network.optimizers import Adam
 from neural_network.foundation import Kernel, Output, HiddenLayer
 from neural_network.loss import CrossEntropyLoss, BinaryCrossEntropyLoss
 
+IMAGE_SIZE = (50, 50)
+IMAGE_CHANNELS = 3
+BATCH_SIZE = 32
+EPOCHS = 10
+
 def create_configuration():
     config = CnnConfiguration({
-        'input_shape': (3, 100, 100),
-        'regularization_lambda': 0.0001,
+        'input_shape': (IMAGE_CHANNELS, *IMAGE_SIZE),
+        'regularization_lambda': 1e-5,
     })
 
     # Processor for test, validation, and training
     config.set_processor(
         ImageProcessor(
             base_dir="./data/breast-histopathology-images",
-            image_size=(100, 100),
-            batch_size=8,
+            image_size=IMAGE_SIZE,
+            batch_size=BATCH_SIZE,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
-            rotation_range=15,
+            rotation_range=30,
             rand_horizontal_flip=0.5,
             rand_vertical_flip=0.5,
             rand_brightness=0.2,
-            rand_contrast=0.3,
-            rand_crop=0.1
+            rand_contrast=0.5,
+            rand_crop=0.5
         )
     )
 
     # Cache model state
     config.with_cache(path="./data/cache/model_optimized.pkl")
-    config.set_global_optimizer(Adam(learning_rate=0.001))
+    config.set_global_optimizer(Adam(learning_rate=0.001, beta1=0.9))
     config.padding_type(Padding.SAME)
 
     # Convolutional blocks
     # Block 1
-    kernel: Kernel = config.add_kernel(number=8, shape=(7, 7), stride=1)
+    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
     kernel.initializer(He())
     kernel.activation(LeakyRelu())
     kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.batch_normalization()
     
-    kernel: Kernel = config.add_kernel(number=8, shape=(3, 3), stride=1)
+    # Block 2
+    kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
     kernel.initializer(He())
-    kernel.activation(Relu())
+    kernel.activation(LeakyRelu())
+    kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.batch_normalization()
+
+    # Block 3
+    kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
+    kernel.initializer(He())
+    kernel.activation(LeakyRelu())
+    kernel.max_pooling(shape=(2, 2), stride=2)
     kernel.batch_normalization()
 
     # Fully connected layers
-    layer: HiddenLayer = config.add_hidden_layer(size=256, dropout=0.5)
+    layer: HiddenLayer = config.add_hidden_layer(size=256, dropout=0.2)
+    layer.activation(LeakyRelu())
+    layer.initializer(He())
+
+    layer: HiddenLayer = config.add_hidden_layer(size=128, dropout=0.2)
     layer.activation(LeakyRelu())
     layer.initializer(He())
 
     # Output layer
-    output: Output = config.output(size=1)  
-    output.activation(Sigmoid())
+    output: Output = config.output(size=2)  
+    output.activation(Softmax())
     output.initializer(He())
-    output.loss_function(BinaryCrossEntropyLoss())
+    output.loss_function(CrossEntropyLoss())
 
     return config
 
@@ -71,16 +90,16 @@ def create_app(config: CnnConfiguration) -> App:
         model=config.new_model(), 
         board=FileInput(
             title="Breast Cancer Recognition",
-            img_resize=(100, 100),
+            img_resize=IMAGE_SIZE,
         )
     )
 
 def train_model(app: App, plot: bool):
     app.model().set_training_mode()
     app.model().get_trainer().train(
-        epochs=50,
+        epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
-        scheduler=ReduceLROnPlateau(factor=0.5, patience=5, min_lr=1e-6)
+        scheduler=ReduceLROnPlateau(factor=0.5, patience=2, min_lr=1e-6)
     )
 
 def validate_model(app: App):
