@@ -41,12 +41,17 @@ def create_configuration():
         )
     )
 
+    config.set_global_optimizer(Adam(learning_rate=0.001))
+    config.with_cache(path='./data/cache/model.pkl')
+    config.padding_type(Padding.SAME)
+    
     # Convolutional blocks
     # Block 1
-    kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
     kernel.initializer(He())
     kernel.activation(LeakyRelu(alpha=0.1))
     kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.clip_gradients(min=-3, max=3)
     kernel.batch_normalization()
     
     # Block 2
@@ -54,6 +59,7 @@ def create_configuration():
     kernel.initializer(He())
     kernel.activation(LeakyRelu(alpha=0.1))
     kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.clip_gradients(min=-2, max=2)
     kernel.batch_normalization()
 
     # Block 3
@@ -61,15 +67,18 @@ def create_configuration():
     kernel.initializer(He())
     kernel.activation(LeakyRelu(alpha=0.1))
     kernel.max_pooling(shape=(2, 2), stride=2)
+    kernel.clip_gradients(min=-1.5, max=1.5)
     kernel.batch_normalization()
 
     # Fully connected layers
     layer: HiddenLayer = config.add_hidden_layer(size=512, dropout=0.5)
     layer.activation(LeakyRelu(alpha=0.1))
+    layer.clip_gradients(min=-1.0, max=1.0)
     layer.initializer(He())
 
     layer: HiddenLayer = config.add_hidden_layer(size=256, dropout=0.5)
     layer.activation(LeakyRelu(alpha=0.1))
+    layer.clip_gradients(min=-1.0, max=1.0)
     layer.initializer(He())
 
     # Output layer

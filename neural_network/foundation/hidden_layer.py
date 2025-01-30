@@ -1,6 +1,7 @@
 from neural_network.core import Activation
 from neural_network.core.optimizer import Optimizer
 from neural_network.core import Initialization
+from neural_network.core.dropout import Dropout
 from neural_network.normalization import BatchNormalization
 
 class HiddenLayer:
@@ -13,18 +14,19 @@ class HiddenLayer:
         self._activation: None | Activation = None
         self._optimizer: None | Optimizer = None
         self._batch_normalization: None | BatchNormalization = None
+        self._clip_gradients: tuple[float, float] | None = None
         self._bias = []
         self._weights = []
         self.size = size
-        self._dropout = dropout
+        self._dropout = Dropout(dropout) if dropout else None
 
     def has_dropout(self) -> bool:
         return self._dropout is not None
     
     def dropout(self, rate: float) -> None:
-        self._dropout = rate
+        self._dropout = Dropout(rate)
 
-    def get_dropout(self):
+    def get_dropout(self) -> "Dropout":
         return self._dropout
     
     def initializer(self, initializer: Initialization):
@@ -72,3 +74,12 @@ class HiddenLayer:
     def initialize(self, input_size: int) -> None:
         self._weights = self._initializer.generate_layer(input_size, self.size)
         self._bias = self._initializer.generate_layer_bias(self.size)
+
+    def clip_gradients(self, min: float = -1e1, max: float = 1e1) -> None:
+        self._clip_gradients = (min, max)
+
+    def has_gradients_clipped(self) -> bool:
+        return self._clip_gradients is not None
+
+    def get_clip_gradients(self) -> None|tuple[float, float]:
+        return self._clip_gradients

@@ -9,6 +9,7 @@ from neural_network.foundation import Output
 class BaseNetwork(ABC):
     _output: Output | None = None
     _global_optimizer: Optimizer | None = None
+    _dropout_mask = None
 
     def set_training_mode(self) -> None:
         self._mode = 'train'
@@ -16,7 +17,7 @@ class BaseNetwork(ABC):
     def set_test_mode(self) -> None:
         self._mode = 'test'
 
-    def is_trainning(self) -> bool:
+    def is_training(self) -> bool:
         return self._mode in 'train'
         
     @abstractmethod
@@ -68,9 +69,12 @@ class BaseNetwork(ABC):
         assert 0 <= rate < 1, "Dropout rate must be in the range [0, 1)."
         
         retain_prob = 1 - rate
-        mask = (gcpu.random.random(size=activations.shape) < retain_prob).astype(activations.dtype)
+        self._dropout_mask = (gcpu.random.random(size=activations.shape) < retain_prob).astype(activations.dtype)
         
-        activations *= mask
+        activations *= self._dropout_mask
         activations /= retain_prob
         
         return activations
+    
+    def _apply_gradients_dropout_mask(self, gradients):
+        return gradients * self._dropout_mask

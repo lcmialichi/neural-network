@@ -48,13 +48,13 @@ class CnnNetwork(DenseNetwork):
     def _apply_single_kernel(self, input_layer, kernel: Kernel):
         conv_output = self._apply_single_convolution(input_layer, kernel)
         conv_output += kernel.bias()[:, gcpu.newaxis, gcpu.newaxis]
-        self._clogits.append(conv_output)
-
+        
         if kernel.has_batch_normalization():
             conv_output = kernel.get_batch_normalization().batch_normalize(
                 x=conv_output, mode=self._mode
             )
 
+        self._clogits.append(conv_output)
         if kernel.has_activation():
             conv_output = kernel.get_activation().activate(conv_output)
 
@@ -63,8 +63,8 @@ class CnnNetwork(DenseNetwork):
 
         self._cached_convolutions.append(conv_output)
 
-        if self.is_trainning() and kernel.has_dropout():
-            conv_output = self._apply_dropout(conv_output, kernel.get_dropout())
+        if self.is_training() and kernel.has_dropout():
+            conv_output = kernel.get_dropout().apply(conv_output)
 
         return conv_output
 
@@ -153,17 +153,14 @@ class CnnNetwork(DenseNetwork):
             num_filters, input_channels, fh, fw = filters.shape
             optimizer = kernel.get_optimizer() or self._global_optimizer
 
+            if self.is_training() and kernel.has_dropout():
+                delta_conv *= kernel.get_dropout().get_mask()
+
             if kernel.has_pooling():
                 delta_conv = kernel.get_pooling().unpooling(delta_conv)
 
             if kernel.has_activation():
                 delta_conv *= kernel.get_activation().derivate(self._clogits[i])
-
-            grad_bias = gcpu.sum(delta_conv, axis=(0, 2, 3))
-            kernel.update_bias(optimizer.update(f"kernel_bias_{i}", kernel.bias(), grad_bias))
-            padding = self._get_padding(
-                (input_layer.shape[2], input_layer.shape[3]), (fh, fw), kernel.stride
-            )          
 
             if kernel.has_batch_normalization():
                 bn = kernel.get_batch_normalization()
@@ -171,15 +168,27 @@ class CnnNetwork(DenseNetwork):
                 bn.update_gama(optimizer.update(f'bn_gamma_{i}', bn.get_gama(), dgamma))
                 bn.update_beta(optimizer.update(f'bn_beta_{i}', bn.get_beta(), dbeta))
 
+            
+            padding = self._get_padding(
+                (input_layer.shape[2], input_layer.shape[3]), (fh, fw), kernel.stride
+            )         
+
+            grad_bias = gcpu.sum(delta_conv, axis=(0, 2, 3))
             batch_size, _, output_h, output_w = delta_conv.shape
             input_padded = self._add_padding(input_layer, padding)
             input_reshaped = im2col(input_padded, (fh, fw), kernel.stride)
             delta_reshaped = delta_conv.reshape(batch_size * output_h * output_w, num_filters)
-            grad_filter = gcpu.dot(delta_reshaped.T, input_reshaped).reshape(filters.shape)
+            grad_filter = gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
             grad_filter += self.regularization_lambda * filters
-            grad_filter = gcpu.clip(grad_filter, -1e1, 1e1)
+
+            if kernel.has_gradients_clipped():
+                min_c, max_c = kernel.get_clip_gradients()
+                grad_filter = gcpu.clip(grad_filter, min_c, max_c)
+                grad_bias = gcpu.clip(grad_bias, min_c, max_c)
+            
+            kernel.update_bias(optimizer.update(f"kernel_bias_{i}", kernel.bias(), grad_bias))
             filter_gradients.append(grad_filter)
-            delta_col = delta_reshaped @ gcpu.flip(filters.reshape(num_filters, -1), axis=1)
+            delta_col = gcpu.matmul(delta_reshaped, gcpu.flip(filters.reshape(num_filters, -1), axis=1))
             delta_conv = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
             delta_conv = delta_conv.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
       

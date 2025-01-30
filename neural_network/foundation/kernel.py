@@ -1,33 +1,36 @@
-from neural_network.core.optimizer import Optimizer
-from neural_network.core import Activation
-from neural_network.core import Initialization
 from neural_network.initializations import He
 from neural_network.normalization import BatchNormalization
 from neural_network.pooling import MaxPooling, AvgPooling
+from neural_network.core import Activation, Initialization
+from neural_network.core.dropout import Dropout
 from neural_network.core.pooling import Pooling
+from neural_network.core.optimizer import Optimizer
 from typing import Callable
 
 class Kernel:
+    
+    _filters: list = []
+    _bias: list = []
+    _dropout: Dropout | None = None
+    _initializer: Initialization = He()
+    _activation: Activation | None = None
+    _batch_normalization: BatchNormalization | None  = None
+    _pooling: Pooling | None = None
+    _optimizer: Optimizer | None = None
+    _clip_gradients: tuple[float, float] | None = None
+
     def __init__(self,  number: int, shape: tuple[int, int] = (3, 3), stride: int = 1):
         self.number = number
         self.shape = shape
         self.stride = stride
-        self._filters = []
-        self._bias = []
-        self._dropout = None
-        self._initializer = He()
-        self._activation = None
-        self._batch_normalization = None
-        self._pooling = None
-        self._optimizer = None
 
     def has_dropout(self) -> bool:
         return self._dropout is not None
     
-    def dropout(self, rate: float):
-        self._dropout = rate
+    def dropout(self, rate: float) -> None:
+        self._dropout = Dropout(rate)
 
-    def get_dropout(self):
+    def get_dropout(self) -> "Dropout":
         return self._dropout
 
     def has_optimizer(self) -> bool:
@@ -92,3 +95,12 @@ class Kernel:
         if callable(callback):
             callback(self)
         return self
+    
+    def clip_gradients(self, min: float = -1e1, max: float = 1e1) -> None:
+        self._clip_gradients = (min, max)
+
+    def has_gradients_clipped(self) -> bool:
+        return self._clip_gradients is not None
+
+    def get_clip_gradients(self) -> None|tuple[float, float]:
+        return self._clip_gradients

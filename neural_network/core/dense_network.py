@@ -1,8 +1,5 @@
 from neural_network.gcpu import gcpu
-from neural_network.core import Activation
 from typing import Union
-from neural_network.core import Initialization
-from neural_network.initializations import Xavier
 from neural_network.core.base_network import BaseNetwork
 from neural_network.train import DenseTrainer
 from neural_network.optimizers import Adam
@@ -26,7 +23,8 @@ class DenseNetwork(BaseNetwork):
        
 
     def _initialize_layers(self, input_size: int) -> None:
-        assert input_size > 0, 'input_size must be > 0'
+        if input_size <= 0:
+            raise ValueError("input_size must be greater than 0")
 
         for layer in self._hidden_layers:
             layer.initialize(input_size)
@@ -46,58 +44,82 @@ class DenseNetwork(BaseNetwork):
             self.dlogits.append(output)
             if layer.has_activation():
                 output = layer.get_activation().activate(output)
-
-            if self.is_trainning() and layer.has_dropout():
-                output = self._apply_dropout(output, layer.get_dropout())
+            
+            if self.is_training() and layer.has_dropout():
+                output = layer.get_dropout().apply(output)
 
             self.hidden_outputs.append(output)
 
         output = gcpu.dot(output, self._output.weights()) + self._output.bias()
+        self.dlogits.append(output)
+
         if self._output.has_activation():
             output = self._output.get_activation().activate(output)
         
+        self.hidden_outputs.append(output)
         return output
 
     def backward(self, x: gcpu.ndarray, y: gcpu.ndarray, output: gcpu.ndarray):
         if not self._output.has_loss_function():
-            raise RuntimeError('ouput loss function not defined')
+            raise RuntimeError("Output loss function not defined")
         
-        deltas = [self._output.get_loss_function().gradient(output, y)]
+        deltas = self._compute_deltas(y, output)
+        self._update_hidden_layers(x, deltas)
+        self._update_output_layer(deltas)
+        
+        return deltas[0].dot(self._hidden_layers[0].weights().T).reshape(x.shape)
 
-        layer_error = deltas[-1].dot(self._output.weights().T)
+    def _compute_deltas(self, y: gcpu.ndarray, output: gcpu.ndarray) -> list:
+        deltas = []
+        output_delta = self._output.get_loss_function().gradient(output, y)
+        
         if self._output.has_activation():
-            layer_error *= self._output.get_activation().derivate(self.dlogits[-1])
-
-        deltas.append(layer_error)
-
-        for i in range(len(self._hidden_layers) - 1, 0, -1):
+            output_delta *= self._output.get_activation().derivate(self.dlogits[-1])
+        
+        deltas.append(output_delta)
+        
+        for i in range(len(self._hidden_layers) - 1, -1, -1):
             layer = self._hidden_layers[i]
-            layer_error = deltas[-1].dot(layer.weights().T)
+            weights = self._output.weights() if i == len(self._hidden_layers) - 1 else self._hidden_layers[i + 1].weights()
+            layer_error = deltas[-1].dot(weights.T)
+            
+            if self.is_training() and layer.has_dropout():
+                layer_error = layer.get_dropout().scale_correction(layer_error)
+            
             if layer.has_activation():
-                layer_error *= layer.get_activation().derivate(self.dlogits[i - 1])
-
+                layer_error *= layer.get_activation().derivate(self.dlogits[i])
+            
             deltas.append(layer_error)
+        
+        return deltas[::-1]
 
-        deltas.reverse()
 
+    def _update_hidden_layers(self, x: gcpu.ndarray, deltas: list):
         for i, layer in enumerate(self._hidden_layers):
             optimizer = layer.get_optimizer() or self._global_optimizer
-
             input_activation = x if i == 0 else self.hidden_outputs[i - 1]
+            
             grad_weight = input_activation.T.dot(deltas[i]) + self.regularization_lambda * layer.weights()
-            layer.update_weights(optimizer.update(f"weights_{i}", layer.weights(), grad_weight))
-
             grad_bias = gcpu.sum(deltas[i], axis=0, keepdims=True)
+            
+            if layer.has_gradients_clipped():
+                min_c, max_c = layer.get_clip_gradients()
+                grad_weight = gcpu.clip(grad_weight, min_c, max_c)
+                grad_bias = gcpu.clip(grad_bias, min_c, max_c)
+            
+            layer.update_weights(optimizer.update(f"weights_{i}", layer.weights(), grad_weight))
             layer.update_bias(optimizer.update(f"biases_{i}", layer.bias(), grad_bias))
 
-        optimizer = self._output.get_optimizer() or self._global_optimizer
-        grad_weight = self.hidden_outputs[-1].T.dot(deltas[-1]) + self.regularization_lambda * self._output.weights()
-        self._output.update_weights(optimizer.update("weights_output", self._output.weights(), grad_weight))
 
+    def _update_output_layer(self, deltas: list):
+        optimizer = self._output.get_optimizer() or self._global_optimizer
+        
+        grad_weight = self.hidden_outputs[-2].T.dot(deltas[-1]) + self.regularization_lambda * self._output.weights()
         grad_bias = gcpu.sum(deltas[-1], axis=0, keepdims=True)
+        
+        self._output.update_weights(optimizer.update("weights_output", self._output.weights(), grad_weight))
         self._output.update_bias(optimizer.update("biases_output", self._output.bias(), grad_bias))
 
-        return deltas[0].dot(self._hidden_layers[0].weights().T).reshape(x.shape)
 
     def train(self, x_batch: gcpu.ndarray, y_batch: gcpu.ndarray) -> gcpu.ndarray:
         output_batch = self.forward(x_batch)
@@ -105,7 +127,7 @@ class DenseNetwork(BaseNetwork):
         return output_batch
 
     def predict(self, x: Union[gcpu.ndarray, gcpu.ndarray]) -> gcpu.ndarray:
-        if len(x.shape) == 1:
+        if x.ndim == 1:
             x = x.reshape(1, -1)
         return self.forward(x)
 

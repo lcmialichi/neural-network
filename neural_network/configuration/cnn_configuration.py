@@ -77,21 +77,13 @@ class CnnConfiguration:
     def padding_type(self, padding: Padding) -> "CnnConfiguration":
         self._config['padding_type'] = padding
         return self
-    
-    def loss_function(self, loss_function: LossFunction):
-        self._config['loss_function'] = loss_function
 
-    def with_activation(self, activation: Activation)-> "CnnConfiguration":
-        self._config['activation'] = activation
-        return self
-    
     def restore_initialization_cache(self):
         if self._storage and self._storage.has():
             self._storage.remove()
             
     def with_no_cache(self):
-        if self._storage:
-            self._storage = None
+        self._storage = None
     
     def set_processor(self, processor: Processor):
         self._config['processor'] = processor
