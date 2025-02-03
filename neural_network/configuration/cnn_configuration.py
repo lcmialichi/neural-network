@@ -1,12 +1,11 @@
 from neural_network.loss import LossFunction
 from neural_network.core.cnn_network import CnnNetwork
-from neural_network.core import Activation
+from neural_network.core import Activation,Flatten, Dense
 from neural_network.activations import Softmax
 from neural_network.core.processor import Processor
 from neural_network.storage import Storage
 from neural_network.core.optimizer import Optimizer
 from neural_network.foundation import Kernel
-from neural_network.foundation import Output
 from neural_network.foundation import HiddenLayer
 from typing import Union
 from neural_network.core.padding import Padding
@@ -19,9 +18,8 @@ class CnnConfiguration:
         self._storage = storage
         self._config: dict = config
         self._config['hidden_layers'] = self._config.get('hidden_layers', [])
-        self._config['kernels'] = self._config.get('kernels', [])
+        self._config['blocks'] = self._config.get('blocks', [])
 
-    
     def with_cache(self, path: str) -> "CnnConfiguration":
         self._storage = Storage(path)
         return self
@@ -47,32 +45,31 @@ class CnnConfiguration:
         size: int, 
         dropout: Union[float, None] = None,
         ) -> "HiddenLayer":
-
         layer = HiddenLayer(size=size, dropout=dropout)
         self._config['hidden_layers'].append(layer)
         return layer
     
-    def output(self, size: int) -> "Output":
-        output = Output(size=size)
-        self._config['output'] = output
-        return output
-        
-    def output_size(self, size: int) -> "CnnConfiguration":
-        self._config['output_size'] = size
-        return self
-    
-    def learning_rate(self, rate: float) -> "CnnConfiguration":
-        self._config['learning_rate'] = rate
-        return self
-        
     def regularization_lambda(self, regularization: float) -> "CnnConfiguration":
         self._config['regularization_lambda'] = regularization
         return self
     
     def add_kernel(self, number: int, shape: tuple[int, int] = (3, 3), stride: int = 1) -> "Kernel":
         kernel = Kernel(number=number, shape=shape, stride=stride)
-        self._config['kernels'].append(kernel)
+        self._config['blocks'].append(kernel)
         return kernel
+    
+    def flatten(self):
+        flatten = Flatten()
+        self._config['blocks'].append(flatten)
+        return flatten
+    
+    def dense(self):
+        dense = Dense()
+        self._config['blocks'].append(dense)
+        return dense
+    
+    def custom(self, custom):
+        self._config['blocks'].append(custom)
     
     def padding_type(self, padding: Padding) -> "CnnConfiguration":
         self._config['padding_type'] = padding
@@ -87,6 +84,15 @@ class CnnConfiguration:
     
     def set_processor(self, processor: Processor):
         self._config['processor'] = processor
+        
+    def loss_function(self, loss_function: LossFunction):
+        self._loss_function = loss_function
+
+    def get_loss_function(self) -> "LossFunction":
+        return self._loss_function
+    
+    def has_loss_function(self) -> bool:
+        return self._loss_function is not None
     
     
     

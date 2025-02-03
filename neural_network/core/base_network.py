@@ -64,17 +64,3 @@ class BaseNetwork(ABC):
     
     def get_output_accuracy(self, x: gcpu.ndarray, z: gcpu.ndarray):
         return self._output.get_loss_function().accuracy(x, z)
-    
-    def _apply_dropout(self, activations: gcpu.ndarray, rate: float) -> gcpu.ndarray:
-        assert 0 <= rate < 1, "Dropout rate must be in the range [0, 1)."
-        
-        retain_prob = 1 - rate
-        self._dropout_mask = (gcpu.random.random(size=activations.shape) < retain_prob).astype(activations.dtype)
-        
-        activations *= self._dropout_mask
-        activations /= retain_prob
-        
-        return activations
-    
-    def _apply_gradients_dropout_mask(self, gradients):
-        return gradients * self._dropout_mask

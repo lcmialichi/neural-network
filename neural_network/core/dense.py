@@ -6,74 +6,67 @@ from neural_network.optimizers import Adam
 from neural_network.foundation import HiddenLayer
 from neural_network.foundation import Output
 
-class DenseNetwork(BaseNetwork):
+class Dense(BaseNetwork):
 
     hidden_outputs: list = []
+    regularization_lambda: None
+    loss_function : None
     dlogits: list = []
+    _block_output: list = []
 
-    def __init__(self, config: dict):
-        
-        self._global_optimizer = config.get('global_optimizer', Adam(learning_rate=0.01))
-        self._output: Output = config.get('output')
-        self.regularization_lambda: float = config.get('regularization_lambda', 0.001)
-        self._hidden_layers: list[HiddenLayer] = config.get('hidden_layers', [])
+    def __init__(self):
+        self._optimizer = None
+        self._blocks: list = []
+        self.mode = None
 
-        input_size = config.get('input_size', 0)
-        self._initialize_layers(input_size)
-       
-
-    def _initialize_layers(self, input_size: int) -> None:
-        if input_size <= 0:
-            raise ValueError("input_size must be greater than 0")
-
-        for layer in self._hidden_layers:
-            layer.initialize(input_size)
-            input_size = layer.size
-
-        self._output.initialize(input_size)
-
+    def add_layer(
+        self, 
+        size: int, 
+        dropout: Union[float, None] = None,
+        ) -> "HiddenLayer":
+        layer = HiddenLayer(size=size, dropout=dropout)
+        self._blocks.append(layer)
+        return layer
+    
+    def optimizer(self, optimizer):
+        self._optimizer = optimizer
 
     def forward(self, x: gcpu.ndarray) -> gcpu.ndarray:
-        self.hidden_outputs.clear()
-        self.dlogits.clear()
-
+        self._block_output.clear()
         output = x
+        for block in self._blocks:
+            if hasattr(block, 'mode'):
+                block.mode = self.mode
+            if hasattr(block, 'regularization_lambda'):
+                block.regularization_lambda = self.regularization_lambda
+            if hasattr(block, 'optimizer'):
+                block.optimizer(self._optimizer)
+                
+            output = block.forward(output)
+            self._block_output.append(output)
 
-        for layer in self._hidden_layers:
-            output = gcpu.dot(output, layer.weights()) + layer.bias()
-            self.dlogits.append(output)
-            if layer.has_activation():
-                output = layer.get_activation().activate(output)
-            
-            if self.is_training() and layer.has_dropout():
-                output = layer.get_dropout().apply(output)
-
-            self.hidden_outputs.append(output)
-
-        output = gcpu.dot(output, self._output.weights()) + self._output.bias()
-        self.dlogits.append(output)
-
-        if self._output.has_activation():
-            output = self._output.get_activation().activate(output)
-        
-        self.hidden_outputs.append(output)
         return output
 
     def backward(self, x: gcpu.ndarray, y: gcpu.ndarray, output: gcpu.ndarray):
-        if not self._output.has_loss_function():
+        if not self._loss_function:
             raise RuntimeError("Output loss function not defined")
         
-        deltas = self._compute_deltas(y, output)
-        self._update_hidden_layers(x, deltas)
-        self._update_output_layer(deltas)
+      
+        deltas_pred = self._loss_function.gradient(output, y)
+        delta = deltas_pred
+        for i in range(len(self._blocks) - 1, -1, -1):
+            block = self._blocks[i]
+            delta = block.backward(delta, self._block_output[i -1])
+            print(delta.shape)
+            exit()  
         
-        return deltas[0].dot(self._hidden_layers[0].weights().T).reshape(x.shape)
+        return delta.reshape(x.shape)
 
     def _compute_deltas(self, y: gcpu.ndarray, output: gcpu.ndarray) -> list:
         deltas = []
-        output_delta = self._output.get_loss_function().gradient(output, y)
+        output_delta = self.loss_function.gradient(output, y)
         
-        if self._output.has_activation():
+        if self._output.do_derivative():
             output_delta *= self._output.get_activation().derivate(self.dlogits[-1])
         
         deltas.append(output_delta)
@@ -85,14 +78,13 @@ class DenseNetwork(BaseNetwork):
             
             if self.is_training() and layer.has_dropout():
                 layer_error = layer.get_dropout().scale_correction(layer_error)
-            
+                
             if layer.has_activation():
                 layer_error *= layer.get_activation().derivate(self.dlogits[i])
             
             deltas.append(layer_error)
         
         return deltas[::-1]
-
 
     def _update_hidden_layers(self, x: gcpu.ndarray, deltas: list):
         for i, layer in enumerate(self._hidden_layers):

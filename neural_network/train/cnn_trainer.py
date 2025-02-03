@@ -18,8 +18,7 @@ class CnnTrainer(BaseTrainer):
             self._model.set_training_mode()
             with tqdm(self._processor.get_train_batches(), desc=f'Epoch {epoch+1}/{epochs} (run)', unit='batch',  leave=False) as progress_bar:
                 for batch_data, batch_labels in progress_bar:
-                    batch_data = batch_data / 255.0
-                    
+                    batch_data = batch_data / 255.0                    
                     output = self._model.train(x_batch=batch_data, y_batch=batch_labels)
                     
                     loss = self._model.get_output_loss(output, batch_labels)

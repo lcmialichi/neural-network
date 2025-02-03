@@ -2,21 +2,21 @@ import argparse
 from neural_network.console import Commands
 from neural_network.app import App
 from neural_network.board import Chart
-from neural_network.initializations import He
+from neural_network.initializations import He, Xavier
 from neural_network.configuration import CnnConfiguration
-from neural_network.activations import LeakyRelu, Relu, Softmax, Sigmoid
+from neural_network.activations import Relu, Softmax
 from neural_network.board import FileInput
-from neural_network.core import Padding
+from neural_network.core.padding import Padding
 from neural_network.core.image_processor import ImageProcessor
 from neural_network.scheduler import ReduceLROnPlateau
 from neural_network.optimizers import Adam
 from neural_network.foundation import Kernel, Output, HiddenLayer
-from neural_network.loss import CrossEntropyLoss, BinaryCrossEntropyLoss
+from neural_network.loss import CrossEntropyLoss
 
 IMAGE_SIZE = (50, 50)
 IMAGE_CHANNELS = 3
-BATCH_SIZE = 32
-EPOCHS = 10
+BATCH_SIZE = 64
+EPOCHS = 30
 
 def create_configuration():
     config = CnnConfiguration({
@@ -24,7 +24,6 @@ def create_configuration():
         'regularization_lambda': 1e-4,
     })
 
-    # Processor for test, validation, and training
     config.set_processor(
         ImageProcessor(
             base_dir="./data/breast-histopathology-images",
@@ -32,60 +31,58 @@ def create_configuration():
             batch_size=BATCH_SIZE,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
-            rotation_range=45,
-            rand_horizontal_flip=0.5,
-            rand_vertical_flip=0.5,
-            rand_brightness=0.2,
-            rand_contrast=0.5,
-            rand_crop=0.5
+            rotation_range=30,
+            rand_horizontal_flip=0.7,
+            rand_vertical_flip=0.7,
+            rand_brightness=0.3,
+            rand_contrast=0.4,
+            rand_crop=0.2,
         )
     )
 
     config.set_global_optimizer(Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
+    config.loss_function(CrossEntropyLoss())
+
+    kernel = config.add_kernel(number=8, shape=(5, 5), stride=1)
+    kernel.initializer(He())
+    kernel.activation(Relu())
+    kernel.batch_normalization()
+
+    kernel1 = config.add_kernel(number=8, shape=(3, 3), stride=1)
+    kernel1.initializer(He())
+    kernel1.activation(Relu())
+    kernel1.batch_normalization()
+    kernel1.max_pooling(shape=(2, 2), stride=2)
+
+    kernel2 = config.add_kernel(number=16, shape=(3, 3), stride=1)
+    kernel2.initializer(He())
+    kernel2.activation(Relu())
+    kernel2.batch_normalization()
+
+    kernel3 = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    kernel3.initializer(He())
+    kernel3.activation(Relu())
+    kernel3.batch_normalization()
+    kernel3.max_pooling(shape=(2, 2), stride=2)
+
+    config.flatten()
+    dense = config.dense()
     
-    # Convolutional blocks
-    # Block 1
-    kernel: Kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(LeakyRelu(alpha=0.1))
-    kernel.max_pooling(shape=(2, 2), stride=2)
-    kernel.clip_gradients(min=-3, max=3)
-    kernel.batch_normalization()
-    
-    # Block 2
-    kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(LeakyRelu(alpha=0.1))
-    kernel.max_pooling(shape=(2, 2), stride=2)
-    kernel.clip_gradients(min=-2, max=2)
-    kernel.batch_normalization()
+    # 🔹 Fully Connected
+    layer1 = dense.add_layer(size=512, dropout=0.5)
+    layer1.initializer(He())
+    layer1.activation(Relu())
 
-    # Block 3
-    kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(LeakyRelu(alpha=0.1))
-    kernel.max_pooling(shape=(2, 2), stride=2)
-    kernel.clip_gradients(min=-1.5, max=1.5)
-    kernel.batch_normalization()
+    layer2 = dense.add_layer(size=256, dropout=0.5)
+    layer2.initializer(He())
+    layer2.activation(Relu())
 
-    # Fully connected layers
-    layer: HiddenLayer = config.add_hidden_layer(size=512, dropout=0.5)
-    layer.activation(LeakyRelu(alpha=0.1))
-    layer.clip_gradients(min=-1.0, max=1.0)
-    layer.initializer(He())
-
-    layer: HiddenLayer = config.add_hidden_layer(size=256, dropout=0.5)
-    layer.activation(LeakyRelu(alpha=0.1))
-    layer.clip_gradients(min=-1.0, max=1.0)
-    layer.initializer(He())
-
-    # Output layer
-    output: Output = config.output(size=2)
+    # 🔹 Saída (Softmax para classificação)
+    output = dense.add_layer(size=2)
     output.activation(Softmax())
-    output.initializer(He())
-    output.loss_function(CrossEntropyLoss())
+    output.initializer(Xavier())
 
     return config
 
@@ -103,7 +100,7 @@ def train_model(app: App, plot: bool):
     app.model().get_trainer().train(
         epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
-        scheduler=ReduceLROnPlateau(factor=0.5, patience=2, min_lr=1e-6)
+        scheduler=ReduceLROnPlateau(factor=0.3, patience=5, min_lr=1e-6)
     )
 
 def validate_model(app: App):

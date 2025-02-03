@@ -110,6 +110,10 @@ Below is an example of configuring the CNN:
         )
     )
 
+    config.set_global_optimizer(Adam(learning_rate=0.001))
+    config.with_cache(path='./data/cache/model.pkl')
+    config.padding_type(Padding.SAME)
+
     # Convolutional blocks
     # Block 1
     kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)

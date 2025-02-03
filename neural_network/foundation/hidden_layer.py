@@ -3,6 +3,8 @@ from neural_network.core.optimizer import Optimizer
 from neural_network.core import Initialization
 from neural_network.core.dropout import Dropout
 from neural_network.normalization import BatchNormalization
+from neural_network.gcpu import gcpu
+import uuid
 
 class HiddenLayer:
     def __init__(
@@ -19,6 +21,10 @@ class HiddenLayer:
         self._weights = []
         self.size = size
         self._dropout = Dropout(dropout) if dropout else None
+        self._logits = None
+        self.mode = None
+        self.layer_id = str(uuid.uuid4())
+        
 
     def has_dropout(self) -> bool:
         return self._dropout is not None
@@ -83,3 +89,52 @@ class HiddenLayer:
 
     def get_clip_gradients(self) -> None|tuple[float, float]:
         return self._clip_gradients
+    
+    def store_logit(self, logits):
+        self._logits = logits
+    
+    def forward(self, input):
+        if not self._weights:
+            self._weights = self._initializer.generate_layer(input.shape[1], self.size)
+        
+        if not self._bias:
+            self._bias = self._initializer.generate_layer_bias(self.size)
+
+        output = gcpu.dot(input, self.weights()) + self.bias()
+        self.store_logit(output)
+        
+        if self.has_activation():
+            output = self.get_activation().activate(output)
+                
+        if self.mode == 'train' and self.has_dropout():
+            output = self.get_dropout().apply(output)
+            
+        return output
+    
+    def backward(
+        self,
+        input_layer, 
+        delta
+        ):
+        layer_error = delta.dot(self.weights().T)
+        
+        if self.mode == 'train' and self.has_dropout():
+            layer_error = self.get_dropout().scale_correction(layer_error)
+            
+        if self.has_activation():
+            layer_error *= self.get_activation().derivate(self._logits)
+        
+        grad_weight = input_layer.T.dot(layer_error) + self.regularization_lambda * self.weights()
+        grad_bias = gcpu.sum(delta, axis=0, keepdims=True)
+        
+        if self.has_gradients_clipped():
+            min_c, max_c = self.get_clip_gradients()
+            grad_weight = gcpu.clip(grad_weight, min_c, max_c)
+            grad_bias = gcpu.clip(grad_bias, min_c, max_c)
+            
+        self.update_weights(self._optimizer.update(f"weights_{self.layer_id}", self.weights(), grad_weight))
+        self.update_bias(self._optimizer.update(f"biases_{self.layer_id}", self.bias(), grad_bias))
+        
+        return layer_error
+
+        

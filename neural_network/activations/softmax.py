@@ -7,5 +7,5 @@ class Softmax(Activation):
         return exp_z / gcpu.sum(exp_z, axis=1, keepdims=True)
 
     def derivate(self, x, alpha = None):
-        return x
+        return 1
     

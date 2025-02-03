@@ -9,4 +9,3 @@ class Activation(ABC):
     @abstractmethod
     def derivate(self, x, alpha = None):
         pass
- 
