@@ -1,4 +1,4 @@
-from neural_network.core import BaseNetwork
+from neural_network.core.base_network import BaseNetwork
 
 class ReduceLROnPlateau:
     def __init__(self,  factor: float=0.5, patience: int =5, min_lr: float =1e-6):

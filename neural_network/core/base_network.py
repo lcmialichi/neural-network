@@ -4,10 +4,8 @@ from neural_network.core.processor import Processor
 from neural_network.core.tester import Tester
 from neural_network.core.optimizer import Optimizer
 from neural_network.gcpu import gcpu
-from neural_network.foundation import Output
 
 class BaseNetwork(ABC):
-    _output: Output | None = None
     _global_optimizer: Optimizer | None = None
     _dropout_mask = None
 
@@ -56,11 +54,8 @@ class BaseNetwork(ABC):
     def get_tester(self) -> Tester:
         return Tester(self, self.get_processor())
 
-    def get_output_size(self) -> int:
-        return self.output.get('size')
-
     def get_output_loss(self, x: gcpu.ndarray, z: gcpu.ndarray) -> gcpu.ndarray:
-        return self._output.get_loss_function().loss(x, z)
+        return self._loss_function.loss(x, z)
     
     def get_output_accuracy(self, x: gcpu.ndarray, z: gcpu.ndarray):
-        return self._output.get_loss_function().accuracy(x, z)
+        return self._loss_function.accuracy(x, z)

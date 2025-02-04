@@ -1,29 +1,27 @@
 import argparse
-from neural_network.console import Commands
-from neural_network.app import App
-from neural_network.board import Chart
-from neural_network.initializations import He, Xavier
-from neural_network.configuration import CnnConfiguration
-from neural_network.activations import Relu, Softmax
-from neural_network.board import FileInput
+import neural_network as nn
+import neural_network.supply as attr
+
+from neural_network import Config
+from neural_network.board import Chart, FileInput
 from neural_network.core.padding import Padding
 from neural_network.core.image_processor import ImageProcessor
-from neural_network.scheduler import ReduceLROnPlateau
-from neural_network.optimizers import Adam
-from neural_network.foundation import Kernel, Output, HiddenLayer
-from neural_network.loss import CrossEntropyLoss
+from neural_network.console import Commands
+from custom.residual_block import ResidualBlock
 
+# Configurações básicas
 IMAGE_SIZE = (50, 50)
 IMAGE_CHANNELS = 3
-BATCH_SIZE = 64
-EPOCHS = 30
+BATCH_SIZE = 128  # Ajustado para melhor aproveitamento da memória
+EPOCHS = 50  # Treinamento mais longo para melhor convergência
 
 def create_configuration():
-    config = CnnConfiguration({
+    config = Config({
         'input_shape': (IMAGE_CHANNELS, *IMAGE_SIZE),
         'regularization_lambda': 1e-4,
     })
 
+    # Preprocessamento de imagens
     config.set_processor(
         ImageProcessor(
             base_dir="./data/breast-histopathology-images",
@@ -31,63 +29,57 @@ def create_configuration():
             batch_size=BATCH_SIZE,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
-            rotation_range=30,
+            rotation_range=45,  # Aumentado para melhor generalização
             rand_horizontal_flip=0.7,
             rand_vertical_flip=0.7,
-            rand_brightness=0.3,
-            rand_contrast=0.4,
-            rand_crop=0.2,
+            rand_brightness=0.4,  # Ajustado para mais robustez
+            rand_contrast=0.5,
+            rand_crop=0.25,
         )
     )
 
-    config.set_global_optimizer(Adam(learning_rate=0.001))
+    # Otimização e perda
+    config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
-    config.loss_function(CrossEntropyLoss())
+    config.loss_function(attr.CrossEntropyLoss())
 
-    kernel = config.add_kernel(number=8, shape=(5, 5), stride=1)
-    kernel.initializer(He())
-    kernel.activation(Relu())
-    kernel.batch_normalization()
-
-    kernel1 = config.add_kernel(number=8, shape=(3, 3), stride=1)
-    kernel1.initializer(He())
-    kernel1.activation(Relu())
+    # ** Deep Conv block (Substituindo por ResNet)**
+    # Bloco inicial
+    kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=2)
+    kernel1.initializer(attr.He())
+    kernel1.activation(attr.Relu())
     kernel1.batch_normalization()
     kernel1.max_pooling(shape=(2, 2), stride=2)
 
-    kernel2 = config.add_kernel(number=16, shape=(3, 3), stride=1)
-    kernel2.initializer(He())
-    kernel2.activation(Relu())
-    kernel2.batch_normalization()
+    # **Adicionando ResNet (com múltiplos blocos residuais)**
+    config.add_custom(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 1
+    config.add_custom(ResidualBlock(number=128, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 2
+    config.add_custom(ResidualBlock(number=256, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 3
+    config.add_custom(ResidualBlock(number=512, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 4
 
-    kernel3 = config.add_kernel(number=32, shape=(3, 3), stride=1)
-    kernel3.initializer(He())
-    kernel3.activation(Relu())
-    kernel3.batch_normalization()
-    kernel3.max_pooling(shape=(2, 2), stride=2)
-
+    # **Flatten**
     config.flatten()
     dense = config.dense()
-    
-    # 🔹 Fully Connected
-    layer1 = dense.add_layer(size=512, dropout=0.5)
-    layer1.initializer(He())
-    layer1.activation(Relu())
 
-    layer2 = dense.add_layer(size=256, dropout=0.5)
-    layer2.initializer(He())
-    layer2.activation(Relu())
+    # **Fully Connected Layers**
+    layer2 = dense.add_layer(size=512, dropout=0.5)
+    layer2.initializer(attr.He())
+    layer2.activation(attr.Relu())
 
-    # 🔹 Saída (Softmax para classificação)
+    layer3 = dense.add_layer(size=256, dropout=0.5)
+    layer3.initializer(attr.He())
+    layer3.activation(attr.Relu())
+
+    # Saída
     output = dense.add_layer(size=2)
-    output.activation(Softmax())
-    output.initializer(Xavier())
+    output.activation(attr.Softmax())
+    output.initializer(attr.Xavier())
 
     return config
 
-def create_app(config: CnnConfiguration) -> App: 
-    return App(
+def create_app(config: Config) -> nn.App: 
+    return nn.app.App(
         model=config.new_model(), 
         board=FileInput(
             title="Breast Cancer Recognition",
@@ -95,22 +87,22 @@ def create_app(config: CnnConfiguration) -> App:
         )
     )
 
-def train_model(app: App, plot: bool):
+def train_model(app: nn.App, plot: bool):
     app.model().set_training_mode()
     app.model().get_trainer().train(
         epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
-        scheduler=ReduceLROnPlateau(factor=0.3, patience=5, min_lr=1e-6)
+        scheduler=attr.ReduceLROnPlateau(factor=0.2, patience=4, min_lr=1e-6)
     )
 
-def validate_model(app: App):
+def validate_model(app: nn.App):
     app.draw()
     app.model().set_test_mode()
     app.board().set_handler(handler=app.predict_image)
     app.board().set_labels(path_json="./labels/breast_cancer.json")
     app.loop()
 
-def test_model(app: App, plot: bool):
+def test_model(app: nn.App, plot: bool):
     app.model().set_test_mode()
     app.model().get_tester().test(plot=Chart().plot_metrics if plot else None)
 

@@ -6,5 +6,5 @@ class Flatten:
         self.shape = input.shape
         return input.reshape(input.shape[0], -1)
     
-    def bakwards(self, delta):
-        return delta.reshape(self.shape, -1)
+    def backward(self, input_layer, y, delta):
+        return delta.reshape(self.shape)
