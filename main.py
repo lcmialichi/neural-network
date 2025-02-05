@@ -9,11 +9,10 @@ from neural_network.core.image_processor import ImageProcessor
 from neural_network.console import Commands
 from custom.residual_block import ResidualBlock
 
-# Configurações básicas
 IMAGE_SIZE = (50, 50)
 IMAGE_CHANNELS = 3
-BATCH_SIZE = 128  # Ajustado para melhor aproveitamento da memória
-EPOCHS = 50  # Treinamento mais longo para melhor convergência
+BATCH_SIZE = 16
+EPOCHS = 50
 
 def create_configuration():
     config = Config({
@@ -21,7 +20,6 @@ def create_configuration():
         'regularization_lambda': 1e-4,
     })
 
-    # Preprocessamento de imagens
     config.set_processor(
         ImageProcessor(
             base_dir="./data/breast-histopathology-images",
@@ -29,34 +27,31 @@ def create_configuration():
             batch_size=BATCH_SIZE,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
-            rotation_range=45,  # Aumentado para melhor generalização
+            rotation_range=45,
             rand_horizontal_flip=0.7,
             rand_vertical_flip=0.7,
-            rand_brightness=0.4,  # Ajustado para mais robustez
+            rand_brightness=0.4,
             rand_contrast=0.5,
             rand_crop=0.25,
         )
     )
 
-    # Otimização e perda
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 
-    # ** Deep Conv block (Substituindo por ResNet)**
-    # Bloco inicial
     kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=2)
     kernel1.initializer(attr.He())
     kernel1.activation(attr.Relu())
     kernel1.batch_normalization()
     kernel1.max_pooling(shape=(2, 2), stride=2)
 
-    # **Adicionando ResNet (com múltiplos blocos residuais)**
-    config.add_custom(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 1
-    config.add_custom(ResidualBlock(number=128, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 2
-    config.add_custom(ResidualBlock(number=256, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 3
-    config.add_custom(ResidualBlock(number=512, shape=(3, 3), stride=1, downsample=True))  # ResNet Stage 4
+    # **ResNet**
+    config.add_custom(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))
+    config.add_custom(ResidualBlock(number=128, shape=(3, 3), stride=2, downsample=True))
+    config.add_custom(ResidualBlock(number=256, shape=(3, 3), stride=2, downsample=True))
+    config.add_custom(ResidualBlock(number=512, shape=(3, 3), stride=2, downsample=True))
 
     # **Flatten**
     config.flatten()
@@ -71,7 +66,7 @@ def create_configuration():
     layer3.initializer(attr.He())
     layer3.activation(attr.Relu())
 
-    # Saída
+    # output
     output = dense.add_layer(size=2)
     output.activation(attr.Softmax())
     output.initializer(attr.Xavier())

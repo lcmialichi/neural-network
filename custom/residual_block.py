@@ -43,16 +43,21 @@ class ResidualBlock(Block):
             shortcut = self.shortcut.forward(x)
 
         out = self.out2 + shortcut
+        self.store_logits(out)
         return Relu().activate(out)
 
     def backward(self, input_layer, y, delta_conv):
-        delta_conv *= Relu().derivate(self.out2 + self.input)
-
+        delta_conv *= Relu().derivate(self.logits())
+       
         delta_residual = delta_conv
 
         delta_conv = self.conv2.backward(self.out1, y, delta_conv)
         delta_conv = self.conv1.backward(self.input, y, delta_conv)
 
-        delta_conv += delta_residual
-
+        if self.downsample:
+            delta_shortcut = self.shortcut.backward(input_layer, y, delta_residual)
+            delta_conv += delta_shortcut
+        
         return delta_conv
+
+
