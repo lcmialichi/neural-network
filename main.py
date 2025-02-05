@@ -9,9 +9,9 @@ from neural_network.core.image_processor import ImageProcessor
 from neural_network.console import Commands
 from custom.residual_block import ResidualBlock
 
-IMAGE_SIZE = (50, 50)
+IMAGE_SIZE = (100, 100)
 IMAGE_CHANNELS = 3
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 EPOCHS = 50
 
 def create_configuration():
@@ -27,46 +27,51 @@ def create_configuration():
             batch_size=BATCH_SIZE,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
-            rotation_range=45,
-            rand_horizontal_flip=0.7,
-            rand_vertical_flip=0.7,
-            rand_brightness=0.4,
-            rand_contrast=0.5,
-            rand_crop=0.25,
+            augmentation=True,
+            augmentation_params={
+                'rotation': 30,
+                'zoom': 0.2,
+                'blur': True
+            }
         )
     )
 
-    config.set_global_optimizer(attr.Adam(learning_rate=0.001))
+    config.driver('cpu')
+    config.set_global_optimizer(attr.Adam(learning_rate=0.0005))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 
-    kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=2)
+    # Camadas iniciais
+    kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=2) 
     kernel1.initializer(attr.He())
-    kernel1.activation(attr.Relu())
+    kernel1.activation(attr.LeakyRelu(alpha=0.01))
     kernel1.batch_normalization()
     kernel1.max_pooling(shape=(2, 2), stride=2)
 
     # **ResNet**
-    config.add_custom(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))
-    config.add_custom(ResidualBlock(number=128, shape=(3, 3), stride=2, downsample=True))
-    config.add_custom(ResidualBlock(number=256, shape=(3, 3), stride=2, downsample=True))
-    config.add_custom(ResidualBlock(number=512, shape=(3, 3), stride=2, downsample=True))
+    for filters, stride in [(64, 1), (128, 2), (256, 1), (512, 2)]:
+        config.add_custom(ResidualBlock(number=filters, shape=(3, 3), stride=stride, downsample=True))
+        config.add_custom(ResidualBlock(number=filters, shape=(3, 3), stride=1, downsample=False))
 
     # **Flatten**
     config.flatten()
     dense = config.dense()
 
     # **Fully Connected Layers**
+    layer1 = dense.add_layer(size=1024, dropout=0.5)
+    layer1.initializer(attr.He())
+    layer1.activation(attr.LeakyRelu(alpha=0.01))
+
     layer2 = dense.add_layer(size=512, dropout=0.5)
     layer2.initializer(attr.He())
-    layer2.activation(attr.Relu())
+    layer2.activation(attr.LeakyRelu(alpha=0.01))
 
     layer3 = dense.add_layer(size=256, dropout=0.5)
     layer3.initializer(attr.He())
-    layer3.activation(attr.Relu())
+    layer3.activation(attr.LeakyRelu(alpha=0.01))
 
-    # output
+    # **Saída**
     output = dense.add_layer(size=2)
     output.activation(attr.Softmax())
     output.initializer(attr.Xavier())

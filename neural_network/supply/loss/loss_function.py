@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 
 class LossFunction(ABC):
     @abstractmethod
-    def gradient(self, y_pred, y_true) -> gcpu.ndarray:
+    def gradient(self, y_pred, y_true):
         pass
 
     @abstractmethod

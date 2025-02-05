@@ -2,7 +2,7 @@ from neural_network.core import Activation
 from neural_network.core.optimizer import Optimizer
 from neural_network.core import Initialization
 from neural_network.core.dropout import Dropout
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 import uuid
 import neural_network.supply as attr
 from .block import Block
@@ -46,7 +46,7 @@ class Layer(Block):
         if self._bias is None:
             self._bias = self._initializer.generate_layer_bias(self.size)
 
-        output = gcpu.dot(input, self.weights()) + self.bias()
+        output = driver.gcpu.dot(input, self.weights()) + self.bias()
         self.store_logits(output)
         
         if self.has_activation():
@@ -69,12 +69,12 @@ class Layer(Block):
         if self.regularization_lambda:
             grad_weight += self.regularization_lambda * self.weights()
 
-        grad_bias = gcpu.sum(delta, axis=0, keepdims=True)
+        grad_bias = driver.gcpu.sum(delta, axis=0, keepdims=True)
 
         if self.has_gradients_clipped():
             min_c, max_c = self.get_clip_gradients()
-            grad_weight = gcpu.clip(grad_weight, min_c, max_c)
-            grad_bias = gcpu.clip(grad_bias, min_c, max_c)
+            grad_weight = driver.gcpu.clip(grad_weight, min_c, max_c)
+            grad_bias = driver.gcpu.clip(grad_bias, min_c, max_c)
 
         self.update_weights(self.get_optimizer().update(f"weights_{self.layer_id}", self.weights(), grad_weight))
         self.update_bias(self.get_optimizer().update(f"biases_{self.layer_id}", self.bias(), grad_bias))

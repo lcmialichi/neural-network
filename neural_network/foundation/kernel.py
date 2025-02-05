@@ -4,7 +4,7 @@ from neural_network.supply import initializations, normalization, pooling
 from neural_network.core.pooling import Pooling
 from neural_network.core.optimizer import Optimizer
 from neural_network.support import conv, im2col, get_padding, add_padding
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 from .block import Block
 
 import uuid
@@ -56,9 +56,7 @@ class Kernel(Block):
         self._bias = self._initializer.kernel_bias(self.number)
     
     def forward(self, x):
-        
         self.clear_logits()
-        
         if self._filters is None:
             self._filters = self._initializer.kernel_filters(self.number, self.shape, x.shape[1])
         
@@ -66,7 +64,7 @@ class Kernel(Block):
             self._bias = self._initializer.kernel_bias(self.number)
 
         logit = conv(x, self.filters(), self.number, self.stride, self.shape, self.padding_type)
-        logit += self.bias()[:, gcpu.newaxis, gcpu.newaxis]
+        logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
         if self.has_batch_normalization():
             logit = self.get_batch_normalization().batch_normalize(
                 x=logit, mode=self.mode
@@ -81,7 +79,7 @@ class Kernel(Block):
             
         if self.mode == 'train' and self.has_dropout():
             conv_output = self.get_dropout().apply(conv_output)
-            
+        
         self.store_logits(logit)
         return conv_output
     
@@ -108,21 +106,32 @@ class Kernel(Block):
             (input_layer.shape[2], input_layer.shape[3]), (fh, fw), self.stride, self.padding_type
         )         
 
-        grad_bias = gcpu.sum(delta, axis=(0, 2, 3))
+        grad_bias = driver.gcpu.sum(delta, axis=(0, 2, 3))
         batch_size, _, output_h, output_w = delta.shape
         input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
         delta_reshaped = delta.reshape(batch_size * output_h * output_w, num_filters)
-        grad_filter = gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
+        grad_filter = driver.gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
         grad_filter += self.regularization_lambda * filters
         
         if self.has_gradients_clipped():
             min_c, max_c = self.get_clip_gradients()
-            grad_filter = gcpu.clip(grad_filter, min_c, max_c)
-            grad_bias = gcpu.clip(grad_bias, min_c, max_c)
+            grad_filter = driver.gcpu.clip(grad_filter, min_c, max_c)
+            grad_bias = driver.gcpu.clip(grad_bias, min_c, max_c)
             
         self.update_bias(self.get_optimizer().update(f"kernel_bias_{self.kernel_id}", self.bias(), grad_bias))
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
-        
-        delta_col = gcpu.matmul(delta_reshaped, gcpu.flip(filters, axis=(2, 3)).reshape(num_filters, -1))
+
+        delta_col = driver.gcpu.matmul(delta.reshape(batch_size * output_h * output_w, num_filters), 
+                                driver.gcpu.flip(filters, axis=(2, 3)).reshape(num_filters, -1))
+
         delta = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
-        return delta.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
+        delta = delta.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
+
+        if self.stride > 1:
+            batch_size, num_filters, _, _ = delta.shape
+            _, _, input_h, input_w = input_layer.shape
+            delta_expanded = driver.gcpu.zeros((batch_size, num_filters, input_h, input_w))
+            delta_expanded[:, :, ::self.stride, ::self.stride] = delta  
+            delta = delta_expanded
+
+        return delta

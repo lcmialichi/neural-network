@@ -5,7 +5,8 @@ from neural_network.foundation.block import Block
 class ResidualBlock(Block):
     def __init__(self, number, shape, stride, downsample=False):
         super().__init__()
-        
+
+        self.downsample = downsample
         self.conv1 = Kernel(number=number, shape=shape, stride=stride)
         self.conv1.initializer(He())
         self.conv1.activation(Relu())
@@ -15,8 +16,7 @@ class ResidualBlock(Block):
         self.conv2.initializer(He())
         self.conv2.activation(Relu())
         self.conv2.batch_normalization()
-
-        self.downsample = downsample
+      
         if self.downsample:
             self.shortcut = Kernel(number=number, shape=(1, 1), stride=stride)
             self.shortcut.initializer(He())
@@ -25,9 +25,6 @@ class ResidualBlock(Block):
         self.input = None
         self.out1 = None
         self.out2 = None
-
-    def optimizer(self, optimizer):
-        self._optimizer = optimizer
 
     def forward(self, x):
         self.input = x

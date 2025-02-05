@@ -85,67 +85,66 @@ python main.py --mode test --plot
 ```
 
 ## Configuration Example
-Below is an example of configuring the CNN:
+Below is an example of configuring the network wioth resnet custom blocks:
 
 ```python
- config = CnnConfiguration({
-        'input_shape': (3, 50, 50),
+import neural_network.supply as attr
+
+from neural_network import Config
+from neural_network.core.padding import Padding
+from custom.residual_block import ResidualBlock
+
+ config = Config({
+        'input_shape': (IMAGE_CHANNELS, *IMAGE_SIZE),
         'regularization_lambda': 1e-4,
     })
 
-    # Processor for test, validation, and training
     config.set_processor(
         ImageProcessor(
             base_dir="./data/breast-histopathology-images",
-            image_size=(50, 50),
-            batch_size=32,
+            image_size=IMAGE_SIZE,
+            batch_size=BATCH_SIZE,
             split_ratios=(0.7, 0.15, 0.15),
             shuffle=True,
-            rotation_range=45,
-            rand_horizontal_flip=0.5,
-            rand_vertical_flip=0.5,
-            rand_brightness=0.2,
-            rand_contrast=0.5,
-            rand_crop=0.5
+            augmentation=True
         )
     )
 
-    config.set_global_optimizer(Adam(learning_rate=0.001))
+    config.driver('gpu')
+    config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
+    config.loss_function(attr.CrossEntropyLoss())
 
-    # Convolutional blocks
-    # Block 1
-    kernel: Kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(LeakyRelu(alpha=0.1))
-    kernel.max_pooling(shape=(2, 2), stride=2)
-    kernel.batch_normalization()
-    
-    # Block 2
-    kernel: Kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(LeakyRelu(alpha=0.1))
-    kernel.max_pooling(shape=(2, 2), stride=2)
-    kernel.batch_normalization()
+    kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=2)
+    kernel1.initializer(attr.He())
+    kernel1.activation(attr.Relu())
+    kernel1.batch_normalization()
+    kernel1.max_pooling(shape=(2, 2), stride=2)
 
-    # Block 3
-    kernel: Kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    kernel.initializer(He())
-    kernel.activation(LeakyRelu(alpha=0.1))
-    kernel.max_pooling(shape=(2, 2), stride=2)
-    kernel.batch_normalization()
+    # **ResNet**
+    config.add_custom(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))
+    config.add_custom(ResidualBlock(number=128, shape=(3, 3), stride=2, downsample=True))
+    config.add_custom(ResidualBlock(number=256, shape=(3, 3), stride=1, downsample=True))
+    config.add_custom(ResidualBlock(number=512, shape=(3, 3), stride=2, downsample=True))
 
-    # Fully connected layers
-    layer: HiddenLayer = config.add_hidden_layer(size=512, dropout=0.5)
-    layer.activation(LeakyRelu(alpha=0.1))
-    layer.initializer(He())
+    # **Flatten**
+    config.flatten()
+    dense = config.dense()
 
-    # Output layer
-    output: Output = config.output(size=2)
-    output.activation(Softmax())
-    output.initializer(He())
-    output.loss_function(CrossEntropyLoss())
+    # **Fully Connected Layers**
+    layer2 = dense.add_layer(size=512, dropout=0.5)
+    layer2.initializer(attr.He())
+    layer2.activation(attr.Relu())
+
+    layer3 = dense.add_layer(size=256, dropout=0.5)
+    layer3.initializer(attr.He())
+    layer3.activation(attr.Relu())
+
+    # output
+    output = dense.add_layer(size=2)
+    output.activation(attr.Softmax())
+    output.initializer(attr.Xavier())
 
     return config
 ```

@@ -3,7 +3,7 @@ from neural_network.train.base_trainer import BaseTrainer
 from neural_network.core.processor import Processor
 from neural_network.core.tester import Tester
 from neural_network.core.optimizer import Optimizer
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 
 class BaseNetwork(ABC):
     _global_optimizer: Optimizer | None = None
@@ -19,19 +19,19 @@ class BaseNetwork(ABC):
         return self._mode in 'train'
         
     @abstractmethod
-    def forward(self, x: gcpu.ndarray):
+    def forward(self, x):
         pass
 
     @abstractmethod
-    def backward(self, x: gcpu.ndarray, y: gcpu.ndarray, output: gcpu.ndarray):
+    def backward(self, x, y, output):
         pass
 
     @abstractmethod
-    def train(self, x_batch: gcpu.ndarray, y_batch: gcpu.ndarray):
+    def train(self, x_batch, y_batch):
         pass
 
     @abstractmethod
-    def predict(self, x: gcpu.ndarray):
+    def predict(self, x):
         pass
 
     def get_processor(self) -> "Processor": 
@@ -54,8 +54,8 @@ class BaseNetwork(ABC):
     def get_tester(self) -> Tester:
         return Tester(self, self.get_processor())
 
-    def get_output_loss(self, x: gcpu.ndarray, z: gcpu.ndarray) -> gcpu.ndarray:
+    def get_output_loss(self, x, z):
         return self._loss_function.loss(x, z)
     
-    def get_output_accuracy(self, x: gcpu.ndarray, z: gcpu.ndarray):
+    def get_output_accuracy(self, x, z):
         return self._loss_function.accuracy(x, z)

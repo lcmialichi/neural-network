@@ -1,4 +1,4 @@
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 from neural_network.core.optimizer import Optimizer
 
 class Adam(Optimizer):
@@ -11,10 +11,10 @@ class Adam(Optimizer):
         self.v = {}
         self.t = 0
 
-    def update(self, param_name: str, param: gcpu.ndarray, grad: gcpu.ndarray) -> gcpu.ndarray:
+    def update(self, param_name: str, param, grad):
         if param_name not in self.m:
-            self.m[param_name] = gcpu.zeros_like(param)
-            self.v[param_name] = gcpu.zeros_like(param)
+            self.m[param_name] = driver.gcpu.zeros_like(param)
+            self.v[param_name] = driver.gcpu.zeros_like(param)
 
         self.t += 1
 
@@ -25,6 +25,6 @@ class Adam(Optimizer):
         m_hat = self.m[param_name] / (1 - self.beta1 ** self.t)
         v_hat = self.v[param_name] / (1 - self.beta2 ** self.t)
         
-        param_update = -self.learning_rate * m_hat / (gcpu.sqrt(v_hat) + self.epsilon)
+        param_update = -self.learning_rate * m_hat / (driver.gcpu.sqrt(v_hat) + self.epsilon)
 
         return param + param_update

@@ -1,8 +1,9 @@
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 from typing import Union
 from neural_network.core.base_network import BaseNetwork
 from neural_network.train import DenseTrainer
 from neural_network.foundation import Layer
+from neural_network.foundation.block import Block
 
 class Dense(BaseNetwork):
 
@@ -13,7 +14,7 @@ class Dense(BaseNetwork):
 
     def __init__(self):
         self._optimizer = None
-        self._blocks: list = []
+        self._blocks: list[Block] = []
         self.mode = None
         self.regularization_lambda = None
         self.loss_function = None
@@ -30,7 +31,7 @@ class Dense(BaseNetwork):
     def optimizer(self, optimizer):
         self._optimizer = optimizer
 
-    def forward(self, x: gcpu.ndarray) -> gcpu.ndarray:
+    def forward(self, x):
         self._block_output.clear()
         output = x
         for block in self._blocks:
@@ -46,7 +47,7 @@ class Dense(BaseNetwork):
 
         return output
 
-    def backward(self, input_layer: gcpu.ndarray, y, output: gcpu.ndarray):
+    def backward(self, input_layer, y, output):
         delta = self.loss_function.gradient(output, y)
         for i in range(len(self._blocks) - 1, -1, -1):
             block = self._blocks[i]
@@ -54,12 +55,12 @@ class Dense(BaseNetwork):
             delta = block.backward(prev_output, y, delta)
         return delta.reshape(input_layer.shape)
 
-    def train(self, x_batch: gcpu.ndarray, y_batch: gcpu.ndarray) -> gcpu.ndarray:
+    def train(self, x_batch, y_batch):
         output_batch = self.forward(x_batch)
         self.backward(x_batch, y_batch, output_batch)
         return output_batch
 
-    def predict(self, x: Union[gcpu.ndarray, gcpu.ndarray]) -> gcpu.ndarray:
+    def predict(self, x):
         if x.ndim == 1:
             x = x.reshape(1, -1)
         return self.forward(x)

@@ -11,13 +11,11 @@ class ResNet:
         self.initial.batch_normalization()
         self.initial.max_pooling(shape=(3, 3), stride=2)
 
-        # Definindo os estágios de blocos residuais
-        self.stage1 = self._make_layer(64, (3, 3), layers[0], stride=1)
-        self.stage2 = self._make_layer(128, (3, 3), layers[1], stride=2)
-        self.stage3 = self._make_layer(256, (3, 3), layers[2], stride=2)
-        self.stage4 = self._make_layer(512, (3, 3), layers[3], stride=2)
+        self.stage1: list[ResidualBlock] = self._make_layer(64, (3, 3), layers[0], stride=1)
+        self.stage2: list[ResidualBlock] = self._make_layer(128, (3, 3), layers[1], stride=2)
+        self.stage3: list[ResidualBlock] = self._make_layer(256, (3, 3), layers[2], stride=2)
+        self.stage4: list[ResidualBlock] = self._make_layer(512, (3, 3), layers[3], stride=2)
 
-        # Camada de flatten e totalmente conectada
         self.flatten = Kernel(number=512, shape=(1, 1), stride=1)
         self.fc = Kernel(number=num_classes, shape=(1, 1), stride=1)
         self.fc.initializer(He())

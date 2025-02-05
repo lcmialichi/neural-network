@@ -1,4 +1,4 @@
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 from neural_network.core.base_network import BaseNetwork
 from neural_network.train import CnnTrainer
 from neural_network.storage import Storage
@@ -38,7 +38,7 @@ class Model(BaseNetwork):
             delta_conv = block.backward(input_layer,y, delta_conv)
         return output
 
-    def train(self, x_batch, y_batch) -> gcpu.ndarray:
+    def train(self, x_batch, y_batch):
         output_batch = self.forward(x_batch)
         self.backward(x_batch, y_batch, output_batch)
         return output_batch
@@ -47,7 +47,7 @@ class Model(BaseNetwork):
         if self._storage:
             self._storage.store(self)
 
-    def predict(self, x) -> gcpu.ndarray:
+    def predict(self, x):
         return self.forward(x)
 
     def get_trainer(self):

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple, Generator
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 
 class Pooling(ABC):
     

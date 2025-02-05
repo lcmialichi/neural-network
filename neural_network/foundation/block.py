@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 class Block(ABC):
     
-    mode: str = None
+    mode: str | None = None
     padding_type = None
     regularization_lambda: float| None = None
     global_optimizer: Optimizer | None = None

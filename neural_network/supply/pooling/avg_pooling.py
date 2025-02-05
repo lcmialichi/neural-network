@@ -1,5 +1,5 @@
 from neural_network.core.pooling import Pooling
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 from neural_network.support import im2col, col2im
 
 class AvgPooling(Pooling):
@@ -18,15 +18,15 @@ class AvgPooling(Pooling):
         col = im2col(input, self.shape, self.stride)
         col = col.reshape(batch_size, channels, output_height, output_width, -1)
 
-        avg_vals = gcpu.mean(col, axis=-1)
+        avg_vals = driver.gcpu.mean(col, axis=-1)
 
         return avg_vals
 
     def unpooling(self, grad):
-        batch_size, channels, out_h, out_w = grad.shape
+        batch_size, channels, _, _ = grad.shape
         pool_h, pool_w = self.shape
 
-        grad_expanded = grad[:, :, :, :, gcpu.newaxis].repeat(pool_h * pool_w, axis=-1)
+        grad_expanded = grad[:, :, :, :, driver.gcpu.newaxis].repeat(pool_h * pool_w, axis=-1)
         grad_expanded = grad_expanded.reshape(batch_size, channels, -1)
 
         grad_expanded /= (pool_h * pool_w)

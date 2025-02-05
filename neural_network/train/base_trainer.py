@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from neural_network.gcpu import gcpu
+from neural_network.gcpu import driver
 from typing import Callable, Union
 
 class BaseTrainer(ABC):

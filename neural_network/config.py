@@ -7,6 +7,7 @@ from neural_network.core.optimizer import Optimizer
 from neural_network.foundation import Kernel
 from typing import Union
 from neural_network.core.padding import Padding
+from neural_network.configuration import Driver, GlobalConfig
 
 class Config:
     def __init__(self, config: dict = None, storage: Union[None, Storage] = None):
@@ -16,6 +17,10 @@ class Config:
         self._storage = storage
         self._config: dict = config
         self._config['blocks'] = self._config.get('blocks', [])
+        GlobalConfig().set_driver(Driver['cpu'])
+        
+    def driver(self, name: str) -> None:
+        GlobalConfig().set_driver(Driver[name])
 
     def with_cache(self, path: str) -> "Config":
         self._storage = Storage(path)
