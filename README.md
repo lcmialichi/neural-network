@@ -23,15 +23,19 @@ Clone the repository and install the required dependencies:
 ```bash
 git clone https://github.com/lcmialichi/neural-network
 cd neural-network
-pip install -r requirements.txt
+python dataset.py
 ```
 
 ### Download the Dataset
-To train the model for breast cancer detection, download the histopathology image dataset from Kaggle:
+To train the model for breast cancer detection, you can download the histopathology image dataset from Kaggle:
+
+#### Option 1: Download using Python Script
 
 ```bash
-kaggle datasets download -d paultimothymooney/breast-histopathology-images -p ./data
+python dataset.py
 ```
+
+#### Option 2: Manual Download
  histopathology image dataset from Kaggle:  
 1. Visit the [Breast Histopathology Images dataset on Kaggle.](https://www.kaggle.com/datasets/paultimothymooney/breast-histopathology-images/data)
 

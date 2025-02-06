@@ -11,7 +11,7 @@ from custom.residual_block import ResidualBlock
 
 IMAGE_SIZE = (50, 50)
 IMAGE_CHANNELS = 3
-BATCH_SIZE = 16
+BATCH_SIZE = 64
 EPOCHS = 100
 
 def create_configuration():
@@ -34,45 +34,69 @@ def create_configuration():
         )
     )
 
-    config.driver('cpu')
-    config.l2_regularization(rate=1e-4)
-    config.set_global_optimizer(attr.Adam(learning_rate=0.0001))
+    config.driver('gpu')
+    config.l2_regularization(rate=5e-5)
+    config.set_global_optimizer(attr.Adam(learning_rate=0.00015))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 
-    # Camada inicial
-    kernel1 = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    # Kernels
+    kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=1)
     kernel1.initializer(attr.He())
-    kernel1.activation(attr.LeakyRelu(alpha=0.01))
+    kernel1.activation(attr.Gelu())
     kernel1.batch_normalization()
-    kernel1.max_pooling(shape=(2, 2), stride=2)
+    kernel1.max_pooling(shape=(3, 3), stride=2)
 
-    # Blocos ResNet
-    config.add(ResidualBlock(number=64, shape=(3, 3), stride=1))
-    config.add(ResidualBlock(number=128, shape=(3, 3), stride=2))
+    config.add(ResidualBlock(number=128, shape=(3, 3), stride=1))
+
+    kernel2 = config.add_kernel(number=128, shape=(3, 3), stride=1)
+    kernel2.initializer(attr.He())
+    kernel2.activation(attr.Gelu())
+    kernel2.batch_normalization()
+    kernel2.max_pooling(shape=(2, 2), stride=2)
+
     config.add(ResidualBlock(number=256, shape=(3, 3), stride=1))
-    config.add(ResidualBlock(number=512, shape=(3, 3), stride=2))
+
+    kernel3 = config.add_kernel(number=256, shape=(3, 3), stride=1)
+    kernel3.initializer(attr.He())
+    kernel3.activation(attr.Gelu())
+    kernel3.batch_normalization()
+    kernel3.max_pooling(shape=(2, 2), stride=2)
+   
+    config.add(ResidualBlock(number=512, shape=(3, 3), stride=1))
+
+    kernel4 = config.add_kernel(number=512, shape=(3, 3), stride=1)
+    kernel4.initializer(attr.He())
+    kernel4.activation(attr.Gelu())
+    kernel4.batch_normalization()
+    kernel4.max_pooling(shape=(2, 2), stride=2)
 
     # Flatten
-    config.global_avg_pooling()
+    config.flatten()
+
+    # Fully connected
     dense = config.dense()
 
-    # Fully Connected Layers
-    layer1 = dense.add_layer(size=512, dropout=0.5)
+    layer1 = dense.add_layer(size=1024, dropout=0.5)
     layer1.initializer(attr.He())
-    layer1.activation(attr.LeakyRelu(alpha=0.01))
+    layer1.activation(attr.Gelu())
 
-    layer2 = dense.add_layer(size=256, dropout=0.5)
+    layer2 = dense.add_layer(size=512, dropout=0.4)
     layer2.initializer(attr.He())
-    layer2.activation(attr.LeakyRelu(alpha=0.01))
+    layer2.activation(attr.Gelu())
 
-    # Saída
+    layer3 = dense.add_layer(size=256, dropout=0.3)
+    layer3.initializer(attr.He())
+    layer3.activation(attr.Gelu())
+
+    # Output Layer
     output = dense.add_layer(size=2)
     output.activation(attr.Softmax())
     output.initializer(attr.Xavier())
 
     return config
+
 
 def create_app(config: Config) -> nn.App:
     return nn.app.App(
@@ -83,13 +107,15 @@ def create_app(config: Config) -> nn.App:
         )
     )
 
+
 def train_model(app: nn.App, plot: bool):
     app.model().set_training_mode()
     app.model().get_trainer().train(
         epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
-        scheduler=attr.ReduceLROnPlateau(factor=0.2, patience=5, min_lr=1e-7)
+        scheduler=attr.ReduceLROnPlateau(factor=0.5, patience=3, min_lr=1e-7)
     )
+
 
 def validate_model(app: nn.App):
     app.draw()
