@@ -6,7 +6,7 @@ from neural_network.configuration import Driver, GlobalConfig
 INSTALLED_PACKAGES = {pkg.key for pkg in pkg_resources.working_set}
 
 def missing_driver(driver: Driver):
-    return driver.get_module() not in INSTALLED_PACKAGES
+    return not any(driver.get_module() in pkg for pkg in INSTALLED_PACKAGES)
 
 def import_module():
     driver = GlobalConfig().get_driver()
