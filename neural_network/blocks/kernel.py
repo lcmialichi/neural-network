@@ -54,15 +54,16 @@ class Kernel(Block):
     def initialize(self, channels: int) -> None:
         self._filters = self._initializer.kernel_filters(self.number, self.shape, channels)
         self._bias = self._initializer.kernel_bias(self.number)
+
+    def boot(self, shape: tuple):
+        self._filters = self._initializer.kernel_filters(self.number, self.shape, shape[1])
+        self._bias = self._initializer.kernel_bias(self.number)
     
     def forward(self, x):
-        self.clear_logits()
-        if self._filters is None:
-            self._filters = self._initializer.kernel_filters(self.number, self.shape, x.shape[1])
-        
-        if self._bias is None:
-            self._bias = self._initializer.kernel_bias(self.number)
+        if self._filters is None and self._bias is None:
+            self.boot(x.shape)
 
+        self.clear_logits()
         logit = conv(x, self.filters(), self.number, self.stride, self.shape, self.padding_type)
         logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
         if self.has_batch_normalization():

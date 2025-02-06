@@ -3,10 +3,10 @@ from neural_network.core.dropout import Dropout
 from neural_network.core.initialization import Initialization
 from neural_network.core.activation import Activation
 from neural_network.supply import normalization
-from abc import ABC, abstractmethod
+from .propagable import Propagable
+from abc import abstractmethod
 
-class Block(ABC):
-    
+class Block(Propagable):
     mode: str | None = None
     padding_type = None
     regularization_lambda: float| None = None
@@ -17,7 +17,7 @@ class Block(ABC):
     _clip_gradients: tuple[float, float] | None = None
     _logits = None
     _dropout: Dropout | None = None
-    
+
     @abstractmethod
     def forward(self, x):
         pass
@@ -25,7 +25,11 @@ class Block(ABC):
     @abstractmethod
     def backward(self, input_layer, y, delta):
         pass
-    
+
+    @abstractmethod
+    def boot(self, shape: tuple):
+        pass
+        
     def has_dropout(self) -> bool:
         return self._dropout is not None
     

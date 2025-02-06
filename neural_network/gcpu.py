@@ -3,10 +3,6 @@ import importlib
 
 from neural_network.configuration import Driver, GlobalConfig
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    import numpy as driver
-    
 INSTALLED_PACKAGES = {pkg.key for pkg in pkg_resources.working_set}
 
 def missing_driver(driver: Driver):

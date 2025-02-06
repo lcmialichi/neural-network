@@ -32,23 +32,18 @@ class Layer(Block):
     def update_weights(self, weights):
         self._weights = weights
         
-    def initialize(self, input_size: int) -> None:
-        self._weights = self._initializer.generate_layer(input_size, self.size)
+    def boot(self, shape: tuple):
+        self._weights = self._initializer.generate_layer(shape[1], self.size)
         self._bias = self._initializer.generate_layer_bias(self.size)
-    
-    def forward(self, input):
-        
-        self.clear_logits()
-        
-        if self._weights is None:
-            self._weights = self._initializer.generate_layer(input.shape[1], self.size)
-        
-        if self._bias is None:
-            self._bias = self._initializer.generate_layer_bias(self.size)
 
+    def forward(self, input):
+        if self._weights is None and self._bias is None:
+            self.boot(input.shape)
+
+        self.clear_logits()
         output = driver.gcpu.dot(input, self.weights()) + self.bias()
         self.store_logits(output)
-        
+
         if self.has_activation():
             output = self.get_activation().activate(output)
                 
@@ -56,6 +51,7 @@ class Layer(Block):
             output = self.get_dropout().apply(output)
             
         return output
+    
     
     def backward(self, input_layer, y, delta):
         if self.mode == 'train' and self.has_dropout():

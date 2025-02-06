@@ -1,14 +1,9 @@
-from neural_network.gcpu import driver
 from typing import Union
-from neural_network.core.base_network import BaseNetwork
-from neural_network.train import DenseTrainer
-from neural_network.foundation import Layer
-from neural_network.foundation.block import Block
+from neural_network.blocks import Layer
+from neural_network.blocks.block import Block
+from .propagable import Propagable
 
-class Dense(BaseNetwork):
-
-    hidden_outputs: list = []
-    dlogits: list = []
+class Dense(Propagable):
     _block_output: list = []
     global_optimizer = None
 
@@ -27,9 +22,6 @@ class Dense(BaseNetwork):
         layer = Layer(size=size, dropout=dropout)
         self._blocks.append(layer)
         return layer
-    
-    def optimizer(self, optimizer):
-        self._optimizer = optimizer
 
     def forward(self, x):
         self._block_output.clear()
@@ -54,16 +46,6 @@ class Dense(BaseNetwork):
             prev_output = self._block_output[i - 1] if i > 0 else input_layer
             delta = block.backward(prev_output, y, delta)
         return delta.reshape(input_layer.shape)
-
-    def train(self, x_batch, y_batch):
-        output_batch = self.forward(x_batch)
-        self.backward(x_batch, y_batch, output_batch)
-        return output_batch
-
-    def predict(self, x):
-        if x.ndim == 1:
-            x = x.reshape(1, -1)
-        return self.forward(x)
-
-    def get_trainer(self):
-        return DenseTrainer(self)
+    
+    def boot(self, shape: tuple):
+        return
