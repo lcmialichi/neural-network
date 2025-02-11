@@ -22,4 +22,4 @@ class Dropout:
         if  self._mask.shape != gradients.shape:
             raise ValueError(f"Dropout mask shape {self._mask.shape} does not match gradients shape {gradients.shape}")
    
-        return (gradients * self._mask) / (1 - self.rate)
+        return  (gradients * self._mask) / (1 - self.rate)

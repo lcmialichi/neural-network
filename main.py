@@ -11,84 +11,85 @@ from custom.residual_block import ResidualBlock
 
 IMAGE_SIZE = (50, 50)
 IMAGE_CHANNELS = 3
-BATCH_SIZE = 64
+BATCH_SIZE = 8
 EPOCHS = 100
 
 def create_configuration():
     config = Config()
     config.set_processor(
         ImageProcessor(
-            base_dir="./data/breast-histopathology-images",
+            base_dir="./data/breast-histopathology-images/IDC_regular_ps50_idx5",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
-            split_ratios=(0.7, 0.15, 0.15),
+            split_ratios=(0.75, 0.15, 0.10),
             shuffle=True,
             augmentation=True,
             augmentation_params={
-                'rotation': 45,
-                'zoom': 0.3,
-                'blur': True,
-                'horizontal_flip': True,
-                'vertical_flip': True
+                'rotation': 30,
+                'zoom': 0.2,
+                'horizontal_flip': 0.5,
+                'vertical_flip': 0.5,
+                'brightness': 0.5,
+                'contrast': 0.5,
+                'shear': 0.3
             }
         )
     )
 
-    config.driver('gpu')
-    config.l2_regularization(rate=5e-5)
-    config.set_global_optimizer(attr.Adam(learning_rate=0.00015))
+    config.driver('cpu')
+    config.set_global_optimizer(attr.Adam(learning_rate=0.0005, weight_decay=1e-4))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 
-    # Kernels
-    kernel1 = config.add_kernel(number=64, shape=(7, 7), stride=1)
-    kernel1.initializer(attr.He())
-    kernel1.activation(attr.Gelu())
-    kernel1.batch_normalization()
-    kernel1.max_pooling(shape=(3, 3), stride=2)
+    # ---- Convolutional  ----
+    kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    kernel.initializer(attr.He())
+    kernel.activation(attr.Relu())
+    kernel.batch_normalization()
+    
+    residual = ResidualBlock(number=64, shape=(3, 3), stride=1)
+    residual.max_pooling(shape=(2, 2), stride=2)
+    config.add(residual)
 
-    config.add(ResidualBlock(number=128, shape=(3, 3), stride=1))
-
-    kernel2 = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel2.initializer(attr.He())
-    kernel2.activation(attr.Gelu())
-    kernel2.batch_normalization()
-    kernel2.max_pooling(shape=(2, 2), stride=2)
-
-    config.add(ResidualBlock(number=256, shape=(3, 3), stride=1))
-
-    kernel3 = config.add_kernel(number=256, shape=(3, 3), stride=1)
-    kernel3.initializer(attr.He())
-    kernel3.activation(attr.Gelu())
-    kernel3.batch_normalization()
-    kernel3.max_pooling(shape=(2, 2), stride=2)
-   
-    config.add(ResidualBlock(number=512, shape=(3, 3), stride=1))
-
-    kernel4 = config.add_kernel(number=512, shape=(3, 3), stride=1)
-    kernel4.initializer(attr.He())
-    kernel4.activation(attr.Gelu())
-    kernel4.batch_normalization()
-    kernel4.max_pooling(shape=(2, 2), stride=2)
+    kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
+    kernel.initializer(attr.He())
+    kernel.activation(attr.Relu())
+    kernel.batch_normalization()
+    
+    residual = ResidualBlock(number=128, shape=(3, 3), stride=1)
+    residual.max_pooling(shape=(2, 2), stride=2)
+    config.add(residual)
+    
+    kernel = config.add_kernel(number=256, shape=(3, 3), stride=1)
+    kernel.initializer(attr.He())
+    kernel.activation(attr.Relu())
+    kernel.batch_normalization()
+    
+    residual = ResidualBlock(number=256, shape=(3, 3), stride=1)
+    residual.max_pooling(shape=(2, 2), stride=2)
+    config.add(residual)
+     
+    kernel = config.add_kernel(number=512, shape=(3, 3), stride=1)
+    kernel.initializer(attr.He())
+    kernel.activation(attr.Relu())
+    kernel.batch_normalization()
+    
+    residual = ResidualBlock(number=512, shape=(3, 3), stride=1)
+    residual.max_pooling(shape=(2, 2), stride=2)
+    config.add(residual)
 
     # Flatten
     config.flatten()
-
-    # Fully connected
     dense = config.dense()
 
     layer1 = dense.add_layer(size=1024, dropout=0.5)
     layer1.initializer(attr.He())
-    layer1.activation(attr.Gelu())
+    layer1.activation(attr.LeakyRelu())
 
-    layer2 = dense.add_layer(size=512, dropout=0.4)
+    layer2 = dense.add_layer(size=512, dropout=0.3)
     layer2.initializer(attr.He())
-    layer2.activation(attr.Gelu())
-
-    layer3 = dense.add_layer(size=256, dropout=0.3)
-    layer3.initializer(attr.He())
-    layer3.activation(attr.Gelu())
+    layer2.activation(attr.LeakyRelu())
 
     # Output Layer
     output = dense.add_layer(size=2)
@@ -113,7 +114,7 @@ def train_model(app: nn.App, plot: bool):
     app.model().get_trainer().train(
         epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
-        scheduler=attr.ReduceLROnPlateau(factor=0.5, patience=3, min_lr=1e-7)
+        scheduler=attr.ReduceLROnPlateau(factor=0.3, patience=2, min_lr=1e-7)
     )
 
 

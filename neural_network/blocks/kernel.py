@@ -112,14 +112,13 @@ class Kernel(Block):
         input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
         delta_reshaped = delta.reshape(batch_size * output_h * output_w, num_filters)
         grad_filter = driver.gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
-        grad_filter += self.regularization_lambda * filters
         
         if self.has_gradients_clipped():
             min_c, max_c = self.get_clip_gradients()
             grad_filter = driver.gcpu.clip(grad_filter, min_c, max_c)
             grad_bias = driver.gcpu.clip(grad_bias, min_c, max_c)
             
-        self.update_bias(self.get_optimizer().update(f"kernel_bias_{self.kernel_id}", self.bias(), grad_bias))
+        self.update_bias(self.get_optimizer().update(f"kernel_bias_{self.kernel_id}", self.bias(), grad_bias, weight_decay=False))
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
 
         delta_col = driver.gcpu.matmul(delta.reshape(batch_size * output_h * output_w, num_filters), 

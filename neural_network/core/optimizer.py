@@ -8,7 +8,7 @@ class Optimizer(ABC):
         self.learning_rate = learning_rate
         
     @abstractmethod
-    def update(self, param_name: str, param, grad):
+    def update(self, param_name: str, param, grad, weight_decay: bool = True):
         pass
     
     def set_learning_rate(self, lr: float) -> None:

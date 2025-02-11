@@ -34,7 +34,7 @@ class AvgPooling(Pooling):
         unpooled_grad = col2im(
             grad_expanded,
             output_shape=self.input_shape,
-            filter_shape=self.shape,
+            filter_size=self.shape,
             stride=self.stride
         )
 

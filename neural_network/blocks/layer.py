@@ -62,9 +62,6 @@ class Layer(Block):
 
         grad_weight = input_layer.T.dot(delta)
         
-        if self.regularization_lambda:
-            grad_weight += self.regularization_lambda * self.weights()
-
         grad_bias = driver.gcpu.sum(delta, axis=0, keepdims=True)
 
         if self.has_gradients_clipped():
@@ -73,7 +70,7 @@ class Layer(Block):
             grad_bias = driver.gcpu.clip(grad_bias, min_c, max_c)
 
         self.update_weights(self.get_optimizer().update(f"weights_{self.layer_id}", self.weights(), grad_weight))
-        self.update_bias(self.get_optimizer().update(f"biases_{self.layer_id}", self.bias(), grad_bias))
+        self.update_bias(self.get_optimizer().update(f"biases_{self.layer_id}", self.bias(), grad_bias, weight_decay=False))
 
         return delta.dot(self.weights().T)
 

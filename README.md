@@ -89,7 +89,7 @@ python main.py --mode test --plot
 ```
 
 ## Configuration Example
-Below is an example of configuring the network wioth resnet custom blocks:
+Below is an example of configuring the network with resnet custom blocks:
 
 ```python
 import neural_network.supply as attr
@@ -127,10 +127,10 @@ from custom.residual_block import ResidualBlock
     kernel1.max_pooling(shape=(2, 2), stride=2)
 
     # **ResNet**
-    config.add_custom(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))
-    config.add_custom(ResidualBlock(number=128, shape=(3, 3), stride=2, downsample=True))
-    config.add_custom(ResidualBlock(number=256, shape=(3, 3), stride=1, downsample=True))
-    config.add_custom(ResidualBlock(number=512, shape=(3, 3), stride=2, downsample=True))
+    config.add(ResidualBlock(number=64, shape=(3, 3), stride=1, downsample=True))
+    config.add(ResidualBlock(number=128, shape=(3, 3), stride=2, downsample=True))
+    config.add(ResidualBlock(number=256, shape=(3, 3), stride=1, downsample=True))
+    config.add(ResidualBlock(number=512, shape=(3, 3), stride=2, downsample=True))
 
     # **Flatten**
     config.flatten()

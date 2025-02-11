@@ -45,7 +45,7 @@ def col2im(cols, output_shape, filter_size: tuple[int, int], stride: int):
             final_h.ravel(),
             final_w.ravel()
         ),
-        cols_reshaped.reshape(batch, channels, -1, fh * fw)
+        cols_reshaped.reshape(batch, channels, height, width)
     )
     
     return image
