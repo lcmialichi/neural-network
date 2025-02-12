@@ -61,7 +61,7 @@ class ResidualBlock(Block):
 
         delta_conv *= Relu().derivate(self.logits())
         delta_shortcut = delta_conv
-        if self.downsample:
+        if self.downsample or delta_shortcut.shape != input_layer.shape:
             delta_shortcut = self.shortcut.backward(input_layer, y, delta_conv)
 
         delta_conv = self.conv2.backward(self.out1, y, delta_conv)

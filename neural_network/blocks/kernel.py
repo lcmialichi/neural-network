@@ -21,10 +21,11 @@ class Kernel(Block):
     _optimizer: Optimizer | None = None
     _clip_gradients: tuple[float, float] | None = None
     
-    def __init__(self, number: int, shape: tuple[int, int] = (3, 3), stride: int = 1):
+    def __init__(self, number: int, shape: tuple[int, int] = (3, 3), stride: int = 1, bias: bool = True):
         self.number = number
         self.shape = shape
         self.stride = stride
+        self._apply_bias = bias
         self.kernel_id = str(uuid.uuid4())
 
     def has_pooling(self) -> bool:
@@ -65,7 +66,8 @@ class Kernel(Block):
 
         self.clear_logits()
         logit = conv(x, self.filters(), self.number, self.stride, self.shape, self.padding_type)
-        logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
+        if self._apply_bias:
+            logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
         if self.has_batch_normalization():
             logit = self.get_batch_normalization().batch_normalize(
                 x=logit, mode=self.mode
@@ -117,10 +119,11 @@ class Kernel(Block):
             min_c, max_c = self.get_clip_gradients()
             grad_filter = driver.gcpu.clip(grad_filter, min_c, max_c)
             grad_bias = driver.gcpu.clip(grad_bias, min_c, max_c)
+        
+        if self._apply_bias:
+            self.update_bias(self.get_optimizer().update(f"kernel_bias_{self.kernel_id}", self.bias(), grad_bias, weight_decay=False))
             
-        self.update_bias(self.get_optimizer().update(f"kernel_bias_{self.kernel_id}", self.bias(), grad_bias, weight_decay=False))
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
-
         delta_col = driver.gcpu.matmul(delta.reshape(batch_size * output_h * output_w, num_filters), 
                                 driver.gcpu.flip(filters, axis=(2, 3)).reshape(num_filters, -1))
 

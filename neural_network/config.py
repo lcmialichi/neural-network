@@ -41,8 +41,8 @@ class Config:
         self._config['regularization_lambda'] = rate
         return self
     
-    def add_kernel(self, number: int, shape: tuple[int, int] = (3, 3), stride: int = 1) -> "Kernel":
-        kernel = Kernel(number=number, shape=shape, stride=stride)
+    def add_kernel(self, number: int, shape: tuple[int, int] = (3, 3), stride: int = 1, bias: bool = True) -> "Kernel":
+        kernel = Kernel(number=number, shape=shape, stride=stride, bias=bias)
         self._add_block(kernel)
         return kernel
     

@@ -120,7 +120,6 @@ class ImageProcessor(Processor):
     def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple, None, None]:
         """
         Generates batches by loading images on demand.
-
         :param patient_paths: List of patient directories.
         """
         all_image_paths = []
@@ -138,7 +137,6 @@ class ImageProcessor(Processor):
 
         batch_data = []
         batch_labels = []
-
         for image_path, label in all_image_paths:
             img = self._load_image(image_path, apply_mask)
             batch_data.append(img)
@@ -164,3 +162,4 @@ class ImageProcessor(Processor):
     def get_test_batches(self) -> Generator[Tuple, None, None]:
         """Generates test batches."""
         return self._generate_batches(self.test_sample, apply_mask=False)
+

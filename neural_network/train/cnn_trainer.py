@@ -21,17 +21,17 @@ class CnnTrainer(BaseTrainer):
                     batch_data = batch_data / 255.0                    
                     output = self._model.train(x_batch=batch_data, y_batch=batch_labels)
                     
-                    loss = self._model.get_output_loss(output, batch_labels)
-                    accuracy = self._model.get_output_accuracy(output, batch_labels)
-                    
-                    epoch_loss += loss
-                    epoch_accuracy += accuracy
+                    epoch_loss += self._model.get_output_loss(output, batch_labels)
+                    epoch_accuracy += self._model.get_output_accuracy(output, batch_labels)
                     num_batches += 1
                     
+                    avg_loss = epoch_loss / num_batches
+                    avg_accuracy = epoch_accuracy / num_batches
+
                     if plot is not None:
-                        plot(epoch, loss, accuracy)
+                        plot(epoch, avg_loss, avg_accuracy)
                     
-                    progress_bar.set_postfix(loss=f'{loss:.4f}', accuracy=f'{accuracy:.4f}')
+                    progress_bar.set_postfix(loss=f'{avg_loss:.4f}', accuracy=f'{avg_accuracy:.4f}')
             
             epoch_loss /= num_batches
             epoch_accuracy /= num_batches
