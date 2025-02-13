@@ -13,7 +13,7 @@ class Initialization(ABC):
         pass
 
     def generate_layer_bias(self, size: int):
-        return driver.gcpu.zeros(size) * 0.1
+        return driver.gcpu.zeros(size)
     
     def kernel_filters(self, filter_number: int, filter_shape: tuple[int, int], channels_number: int):
         generator = driver.gcpu.random
@@ -25,4 +25,4 @@ class Initialization(ABC):
         )
     
     def kernel_bias(self, number: int):
-        return driver.gcpu.zeros(number) * 0.1
+        return driver.gcpu.zeros(number)

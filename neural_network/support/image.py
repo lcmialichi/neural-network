@@ -1,22 +1,22 @@
 from neural_network.gcpu import driver
 
 def im2col(image, filter_size: tuple[int, int], stride: int = 1):
-        batch, channels, height, width = image.shape
-        fh, fw = filter_size
-        output_height = int((height - fh) // stride + 1)
-        output_width = int((width  - fw) // stride + 1)
-    
-        strides = image.strides
-        stride_batch, stride_channel, stride_height, stride_width = strides
+    batch, channels, height, width = image.shape
+    fh, fw = filter_size
+    output_height = int((height - fh) // stride + 1)
+    output_width = int((width - fw) // stride + 1)
 
-        cols = driver.gcpu.lib.stride_tricks.as_strided(
-            image,
-            shape=(batch, channels, output_height, output_width, fh, fw),
-            strides=(stride_batch, stride_channel, stride_height * stride, stride_width * stride, stride_height, stride_width)
-        )
+    image = driver.gcpu.ascontiguousarray(image)
+    stride_batch, stride_channel, stride_height, stride_width = image.strides
 
-        cols = cols.reshape(batch * output_height * output_width, -1)
-        return cols
+    cols = driver.gcpu.lib.stride_tricks.as_strided(
+        image,
+        shape=(batch, channels, output_height, output_width, fh, fw),
+        strides=(stride_batch, stride_channel, stride_height * stride, stride_width * stride, stride_height, stride_width)
+    )
+
+    cols = cols.reshape(batch * output_height * output_width, -1)
+    return cols
 
 def col2im(cols, output_shape, filter_size: tuple[int, int], stride: int):
     batch, channels, height, width = output_shape

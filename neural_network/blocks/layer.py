@@ -18,7 +18,6 @@ class Layer(Block):
         self.size = size
         self._dropout = Dropout(dropout) if dropout else None
         self.layer_id = str(uuid.uuid4())
-
     
     def bias(self):
         return self._bias
@@ -48,20 +47,19 @@ class Layer(Block):
             output = self.get_activation().activate(output)
                 
         if self.mode == 'train' and self.has_dropout():
-            output = self.get_dropout().apply(output)
+            output = self.get_dropout().forward(output)
             
         return output
     
     
     def backward(self, input_layer, y, delta):
         if self.mode == 'train' and self.has_dropout():
-            delta *= self.get_dropout().get_mask()
-
-        if self.has_activation() and not isinstance(self.get_activation(), attr.Softmax):
-            delta *= self.get_activation().derivate(self._logits)
+            delta = self.get_dropout().backwards(delta)
+        
+        if self.has_activation() and not (isinstance(self.get_activation(), attr.Softmax) and isinstance(self.loss_function, attr.CrossEntropyLoss)):
+            delta *= self.get_activation().derivate(self.logits())
 
         grad_weight = input_layer.T.dot(delta)
-        
         grad_bias = driver.gcpu.sum(delta, axis=0, keepdims=True)
 
         if self.has_gradients_clipped():
@@ -73,6 +71,3 @@ class Layer(Block):
         self.update_bias(self.get_optimizer().update(f"biases_{self.layer_id}", self.bias(), grad_bias, weight_decay=False))
 
         return delta.dot(self.weights().T)
-
-
-        

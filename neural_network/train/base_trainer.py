@@ -11,6 +11,6 @@ class BaseTrainer(ABC):
     def train(self,
             epochs: int = 10, 
             plot: Union[None, Callable] = None,
-            scheduler = None
+            callbacks: list = []
             ):
         pass

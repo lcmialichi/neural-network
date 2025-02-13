@@ -81,7 +81,7 @@ class Kernel(Block):
             conv_output = self.get_pooling().apply_pooling(conv_output)
             
         if self.mode == 'train' and self.has_dropout():
-            conv_output = self.get_dropout().apply(conv_output)
+            conv_output = self.get_dropout().forward(conv_output)
         
         self.store_logits(logit)
         return conv_output
@@ -89,9 +89,8 @@ class Kernel(Block):
     def backward(self, input_layer, y, delta):
         filters = self.filters()
         num_filters, input_channels, fh, fw = filters.shape
-        
-        if self.mode and self.has_dropout():
-            delta = self.get_dropout().scale_correction(delta)
+        if self.mode == 'train' and self.has_dropout():
+            delta = self.get_dropout().backwards(delta)
             
         if self.has_pooling():
             delta = self.get_pooling().unpooling(delta)
@@ -124,17 +123,16 @@ class Kernel(Block):
             self.update_bias(self.get_optimizer().update(f"kernel_bias_{self.kernel_id}", self.bias(), grad_bias, weight_decay=False))
             
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
-        delta_col = driver.gcpu.matmul(delta.reshape(batch_size * output_h * output_w, num_filters), 
-                                driver.gcpu.flip(filters, axis=(2, 3)).reshape(num_filters, -1))
 
+        delta_col = driver.gcpu.matmul(
+            delta.reshape(batch_size * output_h * output_w, num_filters), 
+            driver.gcpu.flip(filters, axis=(2, 3)).reshape(num_filters, -1)
+        )
+        
         delta = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
-        delta = delta.transpose(0, 3, 4, 5, 1, 2).sum(axis=(2, 3))
+        delta = delta.transpose(0, 3, 1, 2, 4, 5).sum(axis=(4, 5))
 
         if self.stride > 1:
-            batch_size, num_filters, _, _ = delta.shape
-            _, _, input_h, input_w = input_layer.shape
-            delta_expanded = driver.gcpu.zeros((batch_size, num_filters, input_h, input_w))
-            delta_expanded[:, :, ::self.stride, ::self.stride] = delta  
-            delta = delta_expanded
+            delta = driver.gcpu.interpolate(delta, scale_factor=self.stride, mode="nearest")
 
         return delta

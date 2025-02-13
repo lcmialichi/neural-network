@@ -6,16 +6,13 @@ class Dropout:
         self.rate: float = rate
         self._mask = None
 
-    def apply(self, activations):
+    def forward(self, activations):
         retain_prob = 1 - self.rate
         self._mask = (driver.gcpu.random.random(size=activations.shape) < retain_prob).astype(activations.dtype)
         
         return (activations * self._mask) / retain_prob
 
-    def get_mask(self):
-        return self._mask
-
-    def scale_correction(self, gradients):
+    def backwards(self, gradients):
         if self._mask is None:
             raise ValueError("Dropout mask is None. Ensure `apply()` was called during forward pass.")
         

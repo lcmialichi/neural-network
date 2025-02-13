@@ -23,8 +23,8 @@ class ImageProcessor(Processor):
             'vertical_flip': 0.5,
             'brightness': 0.2,
             'contrast': 0.2,
-            'random_crop': 0.2,
-            'blur': 0.1,
+            'random_crop': 0.0,
+            'blur': 0.0,
             'shear': 0.1,
             'zoom': 0.2,
     }
@@ -68,37 +68,39 @@ class ImageProcessor(Processor):
 
     def _apply_augmentations(self, image):
         """Applies a series of augmentations based on the provided settings."""
-        if random.random() <= self.augmentation_params.get('rotation'):
-            angle = random.uniform(-self.augmentation_params.get('rotation'), self.augmentation_params.get('rotation'))
+        params = self.augmentation_params
+        
+        if 'rotation' in params:
+            angle = random.uniform(-params['rotation'], params['rotation'])
             image = image.rotate(angle)
-
-        if random.random() <= self.augmentation_params.get('horizontal_flip'):
+        
+        if params['horizontal_flip'] and random.random() < 50:
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
-
-        if random.random() <= self.augmentation_params.get('vertical_flip'):
+        
+        if params['vertical_flip'] and random.random() < 50:
             image = image.transpose(Image.FLIP_TOP_BOTTOM)
-
-        if random.random() <= self.augmentation_params.get('brightness'):
-            factor = random.uniform(0.8, 1.2)
+        
+        if 'brightness' in params:
+            factor = random.uniform(1 - params['brightness'], 1 + params['brightness'])
             image = ImageEnhance.Brightness(image).enhance(factor)
-
-        if random.random() <= self.augmentation_params.get('contrast'):
-            factor = random.uniform(0.8, 1.2)
+        
+        if 'contrast' in params:
+            factor = random.uniform(1 - params['contrast'], 1 + params['contrast'])
             image = ImageEnhance.Contrast(image).enhance(factor)
-
-        if random.random() <= self.augmentation_params.get('random_crop'):
+        
+        if 'random_crop' in params:
             width, height = image.size
-            crop_size = (random.uniform(0.8, 1.0) * width, random.uniform(0.8, 1.0) * height)
-            left = random.uniform(0, width - crop_size[0])
-            top = random.uniform(0, height - crop_size[1])
+            crop_size = (int((1 - params['random_crop']) * width), int((1 - params['random_crop']) * height))
+            left = random.randint(0, width - crop_size[0])
+            top = random.randint(0, height - crop_size[1])
             image = image.crop((left, top, left + crop_size[0], top + crop_size[1]))
             image = image.resize(self.image_size)
-
-        if random.random() <= self.augmentation_params.get('blur'):
-            image = image.filter(ImageFilter.GaussianBlur(radius=random.uniform(0.1, 1.5)))
-
-        if random.random() <= self.augmentation_params.get('shear'):
-            shear_factor = random.uniform(-0.3, 0.3)
+        
+        if 'blur' in params:
+            image = image.filter(ImageFilter.GaussianBlur(radius=params['blur']))
+        
+        if 'shear' in params:
+            shear_factor = random.uniform(-params['shear'], params['shear'])
             image = image.transform(
                 image.size,
                 Image.AFFINE,
@@ -106,16 +108,17 @@ class ImageProcessor(Processor):
                 resample=Image.BICUBIC
             )
         
-        if random.random() <= self.augmentation_params.get('zoom'):
-            zoom_factor = random.uniform(1.0, 1 + self.augmentation_params.get('zoom'))
+        if 'zoom' in params:
+            zoom_factor = 1 + random.uniform(0, params['zoom'])
             width, height = image.size
             new_width, new_height = int(width * zoom_factor), int(height * zoom_factor)
             image = image.resize((new_width, new_height))
             left = (new_width - width) // 2
             top = (new_height - height) // 2
             image = image.crop((left, top, left + width, top + height))
-
+        
         return image
+
 
     def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple, None, None]:
         """

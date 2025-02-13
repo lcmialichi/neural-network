@@ -33,7 +33,8 @@ class Dense(Propagable):
                 block.regularization_lambda = self.regularization_lambda
             if hasattr(block, 'global_optimizer'):
                 block.global_optimizer = self.global_optimizer
-                
+            if hasattr(block, 'loss_function'):
+                block.loss_function = self.loss_function
             output = block.forward(output)
             self._block_output.append(output)
 
