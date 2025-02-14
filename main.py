@@ -1,7 +1,6 @@
 import argparse
 import neural_network as nn
 import neural_network.supply as attr
-
 from neural_network import Config
 from neural_network.board import Chart, FileInput
 from neural_network.core.padding import Padding
@@ -17,7 +16,7 @@ def create_configuration():
     config = Config()
     config.set_processor(
         ImageProcessor(
-            base_dir="./data/breast-histopathology-images",
+            base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
             split_ratios=(0.75, 0.15, 0.10),
@@ -34,10 +33,10 @@ def create_configuration():
             }
         )
     )
-    
+
     config.driver('cpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
-    config.with_cache(path='./data/cache/model.pkl')
+    config.with_cache(path='/content/drive/MyDrive/data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 
@@ -94,7 +93,7 @@ def train_model(app: nn.App, plot: bool):
     app.model().get_trainer().train(
         epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
-        callbacks=[attr.ReduceLROnPlateau(factor=0.2, patience=2, min_lr=1e-7)]
+        callbacks=[attr.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=2, min_lr=1e-7)]
     )
 
 def validate_model(app: nn.App):

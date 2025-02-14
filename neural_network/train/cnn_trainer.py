@@ -45,15 +45,23 @@ class CnnTrainer(BaseTrainer):
                 f"\033[1;36mtime\033[0m: {total_time:.2f} seconds",
             )
 
-            loss, accurracy = self._validate(epoch)
+            val_loss, val_accuracy = self._validate(epoch)
+
             print(
                 f"\033[1;36mEpoch {epoch+1}/{epochs} (val)\033[0m"
-                f" - \033[1;34mLoss\033[0m: {loss:.4f}, "
-                f"\033[1;34mAccuracy\033[0m: {accurracy:.4f}"
+                f" - \033[1;34mLoss\033[0m: {val_loss:.4f}, "
+                f"\033[1;34mAccuracy\033[0m: {val_accuracy:.4f}"
             )
-            
+            metrics = {
+                'val_loss': val_loss,
+                'val_accurracy': val_accuracy,
+                'loss': avg_loss,
+                'accurracy': avg_accuracy
+            }
+
+            self._add_history(metrics)
             for callback in callbacks:
-                callback(self._model, loss, accurracy)
+                callback(self._model, metrics)
 
     def _validate(self, epoch: int) -> Tuple[float, float]:
         loss = 0

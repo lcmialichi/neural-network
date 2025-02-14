@@ -14,7 +14,7 @@ class Kernel(Block):
     _filters: list | None = None
     _bias: list | None = None
     _dropout: Dropout | None = None
-    _initializer: Initialization = initializations.He()
+    _initializer: Initialization = initializations.XavierUniform()
     _activation: Activation | None = None
     _batch_normalization: normalization.BatchNormalization | None  = None
     _pooling: Pooling | None = None
@@ -68,14 +68,15 @@ class Kernel(Block):
         logit = conv(x, self.filters(), self.number, self.stride, self.shape, self.padding_type)
         if self._apply_bias:
             logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
-        if self.has_batch_normalization():
-            logit = self.get_batch_normalization().batch_normalize(
-                x=logit, mode=self.mode
-            )
-        
+       
         conv_output = logit
         if self.has_activation():
             conv_output = self.get_activation().activate(conv_output)
+
+        if self.has_batch_normalization():
+            conv_output = self.get_batch_normalization().batch_normalize(
+                x=conv_output, mode=self.mode
+            )
 
         if self.has_pooling():
             conv_output = self.get_pooling().apply_pooling(conv_output)
@@ -95,14 +96,14 @@ class Kernel(Block):
         if self.has_pooling():
             delta = self.get_pooling().unpooling(delta)
 
-        if self.has_activation():
-            delta *= self.get_activation().derivate(self.logits())
-            
         if self.has_batch_normalization():
             bn = self.get_batch_normalization()
             delta, dgamma, dbeta = bn.batch_norm_backward(delta)
-            bn.update_gama(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gama(), dgamma))
-            bn.update_beta(self.get_optimizer().update(f'bn_beta_{self.kernel_id}', bn.get_beta(), dbeta))
+            bn.update_gama(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gama(), dgamma, weight_decay=False))
+            bn.update_beta(self.get_optimizer().update(f'bn_beta_{self.kernel_id}', bn.get_beta(), dbeta, weight_decay=False))
+
+        if self.has_activation():
+            delta *= self.get_activation().derivate(self.logits())
 
         padding = get_padding(
             (input_layer.shape[2], input_layer.shape[3]), (fh, fw), self.stride, self.padding_type
@@ -124,15 +125,20 @@ class Kernel(Block):
             
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
 
+        flipped_filters = driver.gcpu.flip(filters, axis=(2, 3))
         delta_col = driver.gcpu.matmul(
             delta.reshape(batch_size * output_h * output_w, num_filters), 
-            driver.gcpu.flip(filters, axis=(2, 3)).reshape(num_filters, -1)
+            flipped_filters.reshape(num_filters, -1)
         )
         
         delta = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
         delta = delta.transpose(0, 3, 1, 2, 4, 5).sum(axis=(4, 5))
 
         if self.stride > 1:
-            delta = driver.gcpu.interpolate(delta, scale_factor=self.stride, mode="nearest")
+            expanded_delta = driver.gcpu.zeros(
+                (batch_size, num_filters, output_h * self.stride, output_w * self.stride)
+            )
+            expanded_delta[:, :, ::self.stride, ::self.stride] = delta
+            delta = expanded_delta
 
         return delta

@@ -27,6 +27,7 @@ class ImageProcessor(Processor):
             'blur': 0.0,
             'shear': 0.1,
             'zoom': 0.2,
+            'fill_mode': 'nearest'
     }
 
         if augmentation_params is not None:
@@ -69,15 +70,23 @@ class ImageProcessor(Processor):
     def _apply_augmentations(self, image):
         """Applies a series of augmentations based on the provided settings."""
         params = self.augmentation_params
+        fill_mode = params.get('fill_mode', 'nearest')
+        fill_modes = {
+            'nearest': None,
+            'constant': (0, 0, 0),
+            'reflect': 'reflect',
+            'wrap': 'wrap'
+        }
+        fill_value = fill_modes.get(fill_mode, None)
         
         if 'rotation' in params:
             angle = random.uniform(-params['rotation'], params['rotation'])
-            image = image.rotate(angle)
+            image = image.rotate(angle, resample=Image.BICUBIC, fillcolor=fill_value if isinstance(fill_value, tuple) else None)
         
-        if params['horizontal_flip'] and random.random() < 50:
+        if params['horizontal_flip'] and random.random() < 0.5:
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
         
-        if params['vertical_flip'] and random.random() < 50:
+        if params['vertical_flip'] and random.random() < 0.5:
             image = image.transpose(Image.FLIP_TOP_BOTTOM)
         
         if 'brightness' in params:
@@ -105,20 +114,25 @@ class ImageProcessor(Processor):
                 image.size,
                 Image.AFFINE,
                 (1, shear_factor, 0, shear_factor, 1, 0),
-                resample=Image.BICUBIC
+                resample=Image.BICUBIC,
+                fillcolor=fill_value if isinstance(fill_value, tuple) else None
             )
         
         if 'zoom' in params:
             zoom_factor = 1 + random.uniform(0, params['zoom'])
             width, height = image.size
             new_width, new_height = int(width * zoom_factor), int(height * zoom_factor)
-            image = image.resize((new_width, new_height))
+            image = image.resize((new_width, new_height), resample=Image.BICUBIC)
             left = (new_width - width) // 2
             top = (new_height - height) // 2
             image = image.crop((left, top, left + width, top + height))
+            
+            if fill_mode in ['constant', 'reflect', 'wrap']:
+                background = Image.new("RGB", (width, height), (0, 0, 0))
+                background.paste(image, (0, 0))
+                image = background
         
         return image
-
 
     def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple, None, None]:
         """

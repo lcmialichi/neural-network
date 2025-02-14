@@ -6,6 +6,7 @@ class BaseTrainer(ABC):
     def __init__(self, model, processor):
         self._model = model
         self._processor = processor
+        self._history: list = []
 
     @abstractmethod
     def train(self,
@@ -14,3 +15,12 @@ class BaseTrainer(ABC):
             callbacks: list = []
             ):
         pass
+
+    def history(self, key: None|str = None):
+        if key:
+            return self._history[key]
+        
+        return self._history
+    
+    def _add_history(self, data: dict):
+        self._history.append(data)
