@@ -35,12 +35,10 @@ class Layer(Block):
         self._weights = self._initializer.generate_layer(shape[1], self.size)
         self._bias = self._initializer.generate_layer_bias(self.size)
 
-    def forward(self, input):
-        assert input.shape[1] == self.weights().shape[0], "Dimensão incompatível entre input e pesos"
-        
+    def forward(self, input):        
         if self._weights is None and self._bias is None:
             self.boot(input.shape)
-
+        
         self.clear_logits()
         output = driver.gcpu.dot(input, self.weights()) + self.bias()
         self.store_logits(output)
