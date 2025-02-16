@@ -42,25 +42,25 @@ def create_configuration():
 
     # ---- Convolutional Layers ----'
     kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
-    kernel.initializer(attr.HeUniform())
+    kernel.initializer(attr.He())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(2, 2), stride=2)
 
     kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    kernel.initializer(attr.HeUniform())
+    kernel.initializer(attr.He())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
 
     kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(attr.HeUniform())
+    kernel.initializer(attr.He())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
 
     kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(attr.HeUniform())
+    kernel.initializer(attr.He())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
@@ -69,7 +69,7 @@ def create_configuration():
     dense = config.dense()
 
     layer1 = dense.add_layer(size=128, dropout=0.3)
-    layer1.initializer(attr.HeUniform())
+    layer1.initializer(attr.He())
     layer1.activation(attr.Relu())
     
     # Output Layer
