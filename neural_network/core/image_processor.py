@@ -5,6 +5,7 @@ from neural_network.gcpu import driver
 from typing import Tuple, List, Generator
 from neural_network.core.processor import Processor
 from PIL import ImageEnhance, ImageFilter
+import glob
 
 class ImageProcessor(Processor):
     def __init__(
@@ -13,7 +14,7 @@ class ImageProcessor(Processor):
         image_size: Tuple[int, int] = (64, 64), 
         batch_size: int = 32, 
         shuffle: bool = True,
-        split_ratios: tuple = (0.7, 0.15, 0.15),
+        split_ratios: tuple = (0.8, 0.1, 0.1),  # Mudando para 80% treino, 10% validação, 10% teste
         augmentation: bool = False,
         augmentation_params: dict | None = None 
     ):
@@ -28,7 +29,7 @@ class ImageProcessor(Processor):
             'shear': 0.0,
             'zoom': 0.0,
             'fill_mode': 'nearest'
-    }
+        }
 
         if augmentation_params is not None:
             default.update(augmentation_params)
@@ -43,16 +44,32 @@ class ImageProcessor(Processor):
         self.train_sample, self.validation_sample, self.test_sample = self._split_samples()
 
     def _split_samples(self) -> Tuple[List[str], List[str], List[str]]:
-        """Splits patients into training, validation, and testing sets."""
-        sample = [d for d in os.listdir(self.base_dir) if os.path.isdir(os.path.join(self.base_dir, d))]
+        """Splits images into training, validation, and testing sets."""
+        all_images = glob.glob(f'{self.base_dir}/**/*.png', recursive=True)
+        random.shuffle(all_images)
 
-        train_size = int(self.split_ratios[0] * len(sample))
-        val_size = int(self.split_ratios[1] * len(sample))
-        train = sample[:train_size]
-        validation = sample[train_size:train_size + val_size]
-        test = sample[train_size + val_size:]
+        class_0, class_1 = [], []
+        for image_path in all_images:
+            label = self._get_label_from_path(image_path)
+            if label == 0:
+                class_0.append(image_path)
+            else:
+                class_1.append(image_path)
 
-        return train, validation, test
+        all_balanced_images = class_0 + class_1
+        random.shuffle(all_balanced_images)
+
+        train_size = int(self.split_ratios[0] * len(all_balanced_images))
+        val_size = int(self.split_ratios[1] * len(all_balanced_images))
+        
+        train_images = all_balanced_images[:train_size]
+        validation_images = all_balanced_images[train_size:train_size + val_size]
+        test_images = all_balanced_images[train_size + val_size:]
+        return train_images, validation_images, test_images
+
+    def _get_label_from_path(self, image_path: str) -> int:
+        class_dir = os.path.basename(os.path.dirname(image_path))
+        return int(class_dir)
 
     def _load_image(self, image_path: str, apply_mask: bool = False):
         """Loads an image from the path and applies transformations."""
@@ -67,43 +84,14 @@ class ImageProcessor(Processor):
         except Exception as e:
             raise SystemError(f"Unable to process the image {image_path}: {e}")
 
-    def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple, None, None]:
-        """
-        Gera batches balanceados entre múltiplas classes.
-        """
-        class_samples = {}
-
-        # Separar as imagens em classes
-        for patient in patient_paths:
-            patient_dir = os.path.join(self.base_dir, patient)
-            for class_label in os.listdir(patient_dir):
-                class_dir = os.path.join(patient_dir, class_label)
-                if os.path.isdir(class_dir):
-                    label = int(class_label)
-                    if label not in class_samples:
-                        class_samples[label] = []
-                    for image_file in os.listdir(class_dir):
-                        image_path = os.path.join(class_dir, image_file)
-                        class_samples[label].append((image_path, label))
-
-        min_class_size = min(len(samples) for samples in class_samples.values())
-
-        balanced_samples = []
-        for label, samples in class_samples.items():
-            if len(samples) > min_class_size:
-                balanced_samples.extend(random.sample(samples, min_class_size))
-            else:
-                balanced_samples.extend(samples * (min_class_size // len(samples)) + random.sample(samples, min_class_size % len(samples)))
-
-        random.shuffle(balanced_samples)
-
+    def _generate_batches(self, image_paths: List[str], apply_mask: bool = False) -> Generator[Tuple, None, None]:
         batch_data, batch_labels = [], []
-        num_classes = len(class_samples)
-
-        for image_path, label in balanced_samples:
+        for image_path in image_paths:
+            label = self._get_label_from_path(image_path)
             img = self._load_image(image_path, apply_mask)
             batch_data.append(img)
-            batch_labels.append(driver.gcpu.eye(num_classes)[label])
+            batch_labels.append(driver.gcpu.eye(2)[label])
+
             if len(batch_data) == self.batch_size:
                 yield driver.gcpu.array(batch_data), driver.gcpu.array(batch_labels)
                 batch_data, batch_labels = [], []
@@ -124,7 +112,6 @@ class ImageProcessor(Processor):
     def get_test_batches(self) -> Generator[Tuple, None, None]:
         """Generates test batches."""
         return self._generate_batches(self.test_sample, apply_mask=False)
-
 
     def _apply_augmentations(self, image):
         """Applies a series of augmentations based on the provided settings."""
@@ -192,59 +179,3 @@ class ImageProcessor(Processor):
                 image = background
         
         return image
-
-    def _generate_batches(self, patient_paths: List[str], apply_mask: bool = False) -> Generator[Tuple, None, None]:
-        """
-        Gera batches balanceados entre as classes 0 e 1.
-        """
-        class_0, class_1 = [], []
-
-        # Separar as imagens em classes
-        for patient in patient_paths:
-            patient_dir = os.path.join(self.base_dir, patient)
-            for class_label in os.listdir(patient_dir):
-                class_dir = os.path.join(patient_dir, class_label)
-                if os.path.isdir(class_dir):
-                    label = int(class_label)
-                    for image_file in os.listdir(class_dir):
-                        image_path = os.path.join(class_dir, image_file)
-                        if label == 0:
-                            class_0.append((image_path, label))
-                        else:
-                            class_1.append((image_path, label))
-
-        min_class = min(len(class_0), len(class_1))
-        
-        class_0 = random.sample(class_0, min_class) if len(class_0) > min_class else class_0
-        class_1 = class_1 * (min_class // len(class_1)) + random.sample(class_1, min_class % len(class_1))
-
-        all_image_paths = class_0 + class_1
-        random.shuffle(all_image_paths)
-
-        batch_data, batch_labels = [], []
-        for image_path, label in all_image_paths:
-            img = self._load_image(image_path, apply_mask)
-            batch_data.append(img)
-            batch_labels.append(driver.gcpu.eye(2)[label])
-            
-            if len(batch_data) == self.batch_size:
-                yield driver.gcpu.array(batch_data), driver.gcpu.array(batch_labels)
-                batch_data, batch_labels = [], []
-
-        if batch_data:
-            yield driver.gcpu.array(batch_data), driver.gcpu.array(batch_labels)
-
-    def get_train_batches(self) -> Generator[Tuple, None, None]:
-        """Generates training batches."""
-        if self.shuffle:
-            random.shuffle(self.train_sample)
-        return self._generate_batches(self.train_sample, apply_mask=True)
-
-    def get_val_batches(self) -> Generator[Tuple, None, None]:
-        """Generates validation batches."""
-        return self._generate_batches(self.validation_sample, apply_mask=False)
-
-    def get_test_batches(self) -> Generator[Tuple, None, None]:
-        """Generates test batches."""
-        return self._generate_batches(self.test_sample, apply_mask=False)
-
