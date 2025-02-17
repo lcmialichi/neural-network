@@ -19,14 +19,14 @@ def create_configuration():
             base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
-            split_ratios=(0.75, 0.15, 0.10),
+            split_ratios=(0.80, 0.10, 0.10),
             shuffle=True,
             augmentation=True,
             augmentation_params={
                 'rotation': 20,
                 'zoom': 0.2,
                 'horizontal_flip': True,
-                'vertical_flip': False,
+                'vertical_flip': True,
                 'brightness': 0.5,
                 'contrast': 0.5,
                 'shear': 0.2

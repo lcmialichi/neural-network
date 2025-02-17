@@ -41,6 +41,6 @@ def get_output_size(height: int, width: int, filter_shape: tuple[int, int], stri
                          padding: tuple[tuple[int, int], tuple[int, int]] = ((0, 0), (0, 0))) -> tuple[int, int]:
         pad_x = padding[0][0] + padding[0][1]
         pad_y = padding[1][0] + padding[1][1]
-        output_height = driver.gcpu.ceil(height + pad_x - filter_shape[0]) // stride + 1
-        output_width = driver.gcpu.ceil(width + pad_y - filter_shape[1]) // stride + 1
+        output_height = (height + pad_x - filter_shape[0]) // stride + 1
+        output_width = (width + pad_y - filter_shape[1]) // stride + 1
         return int(output_height), int(output_width)

@@ -30,6 +30,9 @@ class MaxPooling(Pooling):
 
         row_indices += row_offsets
         col_indices += col_offsets
+        
+        row_indices = driver.gcpu.clip(row_indices + row_offsets, 0, height - 1)
+        col_indices = driver.gcpu.clip(col_indices + col_offsets, 0, width - 1)
 
         pooled_indexes = driver.gcpu.stack([row_indices, col_indices], axis=-1)
         self.cached_pooling_indexes = pooled_indexes

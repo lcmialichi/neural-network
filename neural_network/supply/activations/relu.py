@@ -10,4 +10,4 @@ class Relu(Activation):
         return driver.gcpu.maximum(0, x)
 
     def derivate(self, x, alpha = None):
-        return (x > 0).astype(float)
+        return driver.gcpu.where(x > 0, 1.0, 0.0)

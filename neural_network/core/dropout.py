@@ -9,7 +9,6 @@ class Dropout:
     def forward(self, activations):
         retain_prob = 1 - self.rate
         self._mask = (driver.gcpu.random.random(size=activations.shape) < retain_prob).astype(activations.dtype)
-        
         return (activations * self._mask) / retain_prob
 
     def backwards(self, gradients):

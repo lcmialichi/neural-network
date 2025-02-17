@@ -55,13 +55,7 @@ class BatchNormalization:
             self.cached_bn = (x, x_hat, batch_mean, batch_var, self._gama, self._beta)
         else:
             x_hat = (x - self.running_mean) / driver.gcpu.sqrt(self.running_var + self._epsilon)
-
-            out = x_hat
-            if self.scale:
-                out = out * self._gama
-            if self.center:
-                out = out + self._beta
-
+            out = self._gama * x_hat + self._beta if self.scale and self.center else x_hat
         return out
     
     def batch_norm_backward(self, dout):

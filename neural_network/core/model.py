@@ -4,6 +4,7 @@ from neural_network.storage import Storage
 from typing import Union
 from neural_network.supply.loss import LossFunction
 from neural_network.blocks.block import Propagable
+from neural_network.gcpu import driver
 
 class Model(BaseNetwork):
 
@@ -22,6 +23,8 @@ class Model(BaseNetwork):
         self._blocks: list[Propagable] = config.get('blocks', [])
         self._loss_function = config.get('loss_function')
         self._num_predictions = 0
+        driver.gcpu.random.seed(42)
+        
 
     def forward(self, x):
         self._block_output.clear()

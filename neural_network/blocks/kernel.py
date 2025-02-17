@@ -75,10 +75,10 @@ class Kernel(Block):
             conv_output = self.get_batch_normalization().batch_normalize(
                 x=conv_output, mode=self.mode
             )
-            
+        
         if self.has_activation():
             conv_output = self.get_activation().activate(conv_output)
-
+            
         if self.has_pooling():
             conv_output = self.get_pooling().apply_pooling(conv_output)
             
@@ -96,18 +96,16 @@ class Kernel(Block):
             
         if self.has_pooling():
             delta = self.get_pooling().unpooling(delta)
-
-       
+            
         if self.has_activation():
             delta *= self.get_activation().derivate(self.logits())
-            
+
         if self.has_batch_normalization():
             bn = self.get_batch_normalization()
             delta, dgamma, dbeta = bn.batch_norm_backward(delta)
             bn.update_gama(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gama(), dgamma, weight_decay=False))
             bn.update_beta(self.get_optimizer().update(f'bn_beta_{self.kernel_id}', bn.get_beta(), dbeta, weight_decay=False))
-
-
+            
         padding = get_padding(
             (input_layer.shape[2], input_layer.shape[3]), (fh, fw), self.stride, self.padding_type
         )         
