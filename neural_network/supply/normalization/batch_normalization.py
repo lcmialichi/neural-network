@@ -62,11 +62,9 @@ class BatchNormalization:
         x, x_hat, mean, var, gamma, beta = self.cached_bn
         N, _, H, W = x.shape
 
-        # Calculando os gradientes de gama e beta
         dgamma = driver.gcpu.sum(dout * x_hat, axis=(0, 2, 3), keepdims=True) if self.scale else None
         dbeta = driver.gcpu.sum(dout, axis=(0, 2, 3), keepdims=True) if self.center else None
 
-        # Gradiente de x
         dx_hat = dout * gamma if self.scale else dout
         dvar = driver.gcpu.sum(dx_hat * (x - mean) * -0.5 * driver.gcpu.power(var + self._epsilon, -1.5), axis=(0, 2, 3), keepdims=True)
         dmean = driver.gcpu.sum(dx_hat * -1 / driver.gcpu.sqrt(var + self._epsilon), axis=(0, 2, 3), keepdims=True) + dvar * driver.gcpu.sum(-2 * (x - mean), axis=(0, 2, 3), keepdims=True) / (N * H * W)
