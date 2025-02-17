@@ -16,7 +16,7 @@ def create_configuration():
     config = Config()
     config.set_processor(
         ImageProcessor(
-            base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
+            base_dir="./data/breast-histopathology-images/IDC_regular_ps50_idx5",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
             split_ratios=(0.80, 0.10, 0.10),
@@ -34,9 +34,9 @@ def create_configuration():
         )
     )
 
-    config.driver('gpu')
+    config.driver('cpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
-    config.with_cache(path='/content/drive/MyDrive/data/cache/model.pkl')
+    config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 

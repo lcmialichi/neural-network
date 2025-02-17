@@ -2,16 +2,16 @@ from .image import im2col
 from neural_network.gcpu import driver
 from neural_network.core.padding import Padding
 
-def conv(input_layer, filters, number: int, stride: int , shape: tuple[int, int], padding_type: Padding):
-    _, _, i_h, i_w = input_layer.shape
+def conv(input_layer, filters, number: int, stride: int, shape: tuple[int, int], padding_type: Padding):
+    batch_size, _, i_h, i_w = input_layer.shape  
     padding = get_padding((i_h, i_w), shape, stride, padding_type)
     input_padded = add_padding(input_layer, padding)
     col = im2col(input_padded, shape, stride)
-    conv_output = driver.gcpu.einsum('ij,bj->bi', filters.reshape(number, -1), col)
-    output_height, output_width = get_output_size(
-        i_h, i_w, shape, stride, padding
-    )
-    return conv_output.reshape(input_layer.shape[0], number, output_height, output_width)
+    filters_reshaped = filters.reshape(number, -1)
+    conv_output = driver.gcpu.matmul(filters_reshaped, col.T)
+    output_height, output_width = get_output_size(i_h, i_w, shape, stride, padding)
+    conv_output = conv_output.T.reshape(batch_size, number, output_height, output_width)
+    return conv_output
 
 def get_padding(input_shape: tuple[int, int], filter_shape: tuple[int, int], stride: int = 1, padding_type = Padding.SAME) -> tuple[int, int]:
         if padding_type == Padding.SAME:
