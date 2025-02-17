@@ -16,7 +16,7 @@ def create_configuration():
     config = Config()
     config.set_processor(
         ImageProcessor(
-            base_dir="./data/breast-histopathology-images/IDC_regular_ps50_idx5",
+            base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
             split_ratios=(0.80, 0.10, 0.10),
@@ -27,8 +27,6 @@ def create_configuration():
                 'zoom': 0.2,
                 'horizontal_flip': True,
                 'vertical_flip': True,
-                'brightness': 0.5,
-                'contrast': 0.5,
                 'shear': 0.2
             }
         )
@@ -36,31 +34,31 @@ def create_configuration():
 
     config.driver('cpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
-    config.with_cache(path='./data/cache/model.pkl')
+    config.with_cache(path='/content/drive/MyDrive/data/cache/model.pkl')
     config.padding_type(Padding.SAME)
     config.loss_function(attr.CrossEntropyLoss())
 
     # ---- Convolutional Layers ----'
     kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
-    kernel.initializer(attr.XavierUniform())
+    kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(2, 2), stride=2)
 
     kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
-    kernel.initializer(attr.XavierUniform())
+    kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
 
     kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(attr.XavierUniform())
+    kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
 
     kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
-    kernel.initializer(attr.XavierUniform())
+    kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
@@ -69,7 +67,7 @@ def create_configuration():
     dense = config.dense()
 
     layer1 = dense.add_layer(size=128, dropout=0.3)
-    layer1.initializer(attr.XavierUniform())
+    layer1.initializer(attr.HeUniform())
     layer1.activation(attr.Relu())
     
     # Output Layer

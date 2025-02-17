@@ -18,15 +18,15 @@ class ImageProcessor(Processor):
         augmentation_params: dict | None = None 
     ):
         default = {
-            'rotation': 30,
-            'horizontal_flip': 0.5,
-            'vertical_flip': 0.5,
-            'brightness': 0.2,
-            'contrast': 0.2,
+            'rotation': 0,
+            'horizontal_flip': False,
+            'vertical_flip': False,
+            'brightness': 0.0,
+            'contrast': 0.0,
             'random_crop': 0.0,
             'blur': 0.0,
-            'shear': 0.1,
-            'zoom': 0.2,
+            'shear': 0.0,
+            'zoom': 0.0,
             'fill_mode': 'nearest'
     }
 
