@@ -1,8 +1,11 @@
-from .image import im2col
 from neural_network.gcpu import driver
 from neural_network.core.padding import Padding
+from .image import im2col
 
 def conv(input_layer, filters, number: int, stride: int, shape: tuple[int, int], padding_type: Padding):
+    expected_filter_shape = (number, input_layer.shape[1], shape[0], shape[1])
+    assert filters.shape == expected_filter_shape, f"Filters shape {filters.shape} != {expected_filter_shape}"
+    
     batch_size, _, i_h, i_w = input_layer.shape  
     padding = get_padding((i_h, i_w), shape, stride, padding_type)
     input_padded = add_padding(input_layer, padding)

@@ -11,10 +11,10 @@ class ImageProcessor(Processor):
     def __init__(
         self, 
         base_dir: str, 
-        image_size: Tuple[int, int] = (64, 64), 
+        image_size: Tuple[int, int] = (50, 50), 
         batch_size: int = 32, 
         shuffle: bool = True,
-        split_ratios: tuple = (0.8, 0.1, 0.1),  # Mudando para 80% treino, 10% validação, 10% teste
+        split_ratios: tuple = (0.8, 0.1, 0.1),
         augmentation: bool = False,
         augmentation_params: dict | None = None 
     ):

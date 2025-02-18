@@ -100,7 +100,7 @@ class Kernel(Block):
         if self.has_batch_normalization():
             bn = self.get_batch_normalization()
             delta, dgamma, dbeta = bn.batch_norm_backward(delta)
-            bn.update_gama(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gama(), dgamma, weight_decay=False))
+            bn.update_gamma(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gamma(), dgamma, weight_decay=False))
             bn.update_beta(self.get_optimizer().update(f'bn_beta_{self.kernel_id}', bn.get_beta(), dbeta, weight_decay=False))
             
         if self.has_activation():

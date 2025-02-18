@@ -60,8 +60,8 @@ class Block(Propagable):
     def has_activation(self) -> bool:
         return self._activation is not None
     
-    def batch_normalization(self, gama: float = 1.0, beta: float = 0.0, momentum: float = 0.9) -> None:
-        self._batch_normalization = normalization.BatchNormalization(self.number, gama=gama, beta=beta, momentum=momentum)
+    def batch_normalization(self, gamma: float = 1.0, beta: float = 0.0, momentum: float = 0.99) -> None:
+        self._batch_normalization = normalization.BatchNormalization(self.number, gamma=gamma, beta=beta, momentum=momentum)
 
     def get_batch_normalization(self) -> "normalization.BatchNormalization":
         return self._batch_normalization

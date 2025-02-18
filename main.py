@@ -32,7 +32,7 @@ def create_configuration():
         )
     )
 
-    config.driver('gpu')
+    config.driver('cpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='/content/drive/MyDrive/data/cache/model.pkl')
     config.padding_type(Padding.SAME)

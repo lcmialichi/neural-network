@@ -46,6 +46,9 @@ class BaseNetwork(ABC):
     
     def set_learning_rate(self, val: float) -> None:
         self._global_optimizer.set_learning_rate(val)
+        
+    def step(self):
+        self._global_optimizer.step()
     
     @abstractmethod
     def get_trainer(self) -> "BaseTrainer":

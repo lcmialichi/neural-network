@@ -31,6 +31,7 @@ class CnnTrainer(BaseTrainer):
                     if plot is not None:
                         plot(epoch, avg_loss, avg_accuracy)
                     
+                    self._model.step()
                     progress_bar.set_postfix(loss=f'{avg_loss:.4f}', accuracy=f'{avg_accuracy:.4f}')
             
             total_time = progress_bar.format_dict["elapsed"]
