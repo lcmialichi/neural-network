@@ -10,7 +10,7 @@ class Adam(Optimizer):
         self.weight_decay = weight_decay
         self.m = {}
         self.v = {}
-        self.t = 1
+        self.iterations = 0
 
     def update(self, param_name: str, param, grad, weight_decay: bool = True):
         if param_name not in self.m:
@@ -21,15 +21,18 @@ class Adam(Optimizer):
             grad = grad + self.weight_decay * param
             
         self.m[param_name] = self.beta1 * self.m[param_name] + (1 - self.beta1) * grad
-
         self.v[param_name] = self.beta2 * self.v[param_name] + (1 - self.beta2) * (grad ** 2)
 
-        m_hat = self.m[param_name] / (1 - self.beta1 ** self.t)
-        v_hat = self.v[param_name] / (1 - self.beta2 ** self.t)
+        local_step = self.iterations + 1
+        beta1_correction = 1 - self.beta1 ** local_step
+        beta2_correction = 1 - self.beta2 ** local_step
+
+        m_hat = self.m[param_name] / beta1_correction
+        v_hat = self.v[param_name] / beta2_correction
 
         param_update = -self.learning_rate * m_hat / (driver.gcpu.sqrt(v_hat) + self.epsilon)
 
         return param + param_update
     
     def step(self):
-        self.t += 1
+        self.iterations += 1
