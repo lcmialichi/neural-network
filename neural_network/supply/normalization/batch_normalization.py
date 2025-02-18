@@ -44,7 +44,7 @@ class BatchNormalization:
         
     def batch_normalize(self, x, training=False):
         reduction_axes = tuple([i for i in range(x.ndim) if i != self.axis])
-        m = driver.gcpu.prod([x.shape[i] for i in reduction_axes])
+        m = int(driver.gcpu.asarray([x.shape[i] for i in reduction_axes]).prod())
         
         if training and self.trainable:
             batch_mean = driver.gcpu.mean(x, axis=reduction_axes, keepdims=True)
