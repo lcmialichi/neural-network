@@ -76,7 +76,7 @@ class Kernel(Block):
             
         if self.has_batch_normalization():
             conv_output = self.get_batch_normalization().batch_normalize(
-                x=conv_output, mode=self.mode
+                x=conv_output, training=self.mode == 'train'
             )
             
         if self.has_pooling():
