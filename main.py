@@ -19,7 +19,7 @@ def create_configuration():
             base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
-            split_ratios=(0.80, 0.10, 0.10),
+            split_ratios=(0.90, 0.10),
             shuffle=True,
             augmentation=True,
             augmentation_params={
@@ -71,8 +71,8 @@ def create_configuration():
     layer1.activation(attr.Relu())
     
     # Output Layer
-    output = dense.add_layer(size=1)
-    output.activation(attr.Sigmoid())
+    output = dense.add_layer(size=2)
+    output.activation(attr.Softmax())
     output.initializer(attr.XavierUniform())
     
     return config

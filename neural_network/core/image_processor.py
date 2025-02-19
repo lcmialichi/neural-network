@@ -14,7 +14,7 @@ class ImageProcessor(Processor):
         image_size: Tuple[int, int] = (50, 50), 
         batch_size: int = 32, 
         shuffle: bool = True,
-        split_ratios: tuple = (0.8, 0.1, 0.1),
+        split_ratios: tuple = (0.8, 0.1),
         augmentation: bool = False,
         augmentation_params: dict | None = None 
     ):
