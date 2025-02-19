@@ -16,10 +16,7 @@ class BaseTrainer(ABC):
             ):
         pass
 
-    def history(self, key: None|str = None):
-        if key:
-            return self._history[key]
-        
+    def history(self):
         return self._history
     
     def _add_history(self, data: dict):

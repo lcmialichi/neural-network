@@ -9,7 +9,7 @@ def conv(input_layer, filters, number: int, stride: int, shape: tuple[int, int],
     batch_size, _, i_h, i_w = input_layer.shape  
     padding = get_padding((i_h, i_w), shape, stride, padding_type)
     input_padded = add_padding(input_layer, padding)
-    col = im2col(input_padded, shape, stride)
+    col = im2col(input_padded, shape, stride, for_conv=True)
     filters_reshaped = filters.reshape(number, -1)
     conv_output = driver.gcpu.matmul(filters_reshaped, col.T)
     output_height, output_width = get_output_size(i_h, i_w, shape, stride, padding)

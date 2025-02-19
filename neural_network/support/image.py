@@ -1,22 +1,37 @@
 from neural_network.gcpu import driver
 
-def im2col(image, filter_size: tuple[int, int], stride: int = 1):
+def im2col(
+    image, 
+    filter_size: tuple[int, int], 
+    stride: int = 1,
+    for_conv: bool = False
+):
     batch, channels, height, width = image.shape
     fh, fw = filter_size
-    output_height = int((height - fh) // stride + 1)
-    output_width = int((width - fw) // stride + 1)
+    output_height = (height - fh) // stride + 1
+    output_width = (width - fw) // stride + 1
 
     image = driver.gcpu.ascontiguousarray(image)
-    stride_batch, stride_channel, stride_height, stride_width = image.strides
-
-    cols = driver.gcpu.lib.stride_tricks.as_strided(
+    
+    strided_image = driver.gcpu.lib.stride_tricks.as_strided(
         image,
         shape=(batch, channels, output_height, output_width, fh, fw),
-        strides=(stride_batch, stride_channel, stride_height * stride, stride_width * stride, stride_height, stride_width)
+        strides=(
+            image.strides[0],
+            image.strides[1],
+            image.strides[2] * stride,
+            image.strides[3] * stride,
+            image.strides[2],
+            image.strides[3]
+        )
     )
-
-    cols = cols.reshape(batch * output_height * output_width, -1)
-    return cols
+    
+    if for_conv:
+        strided_image = strided_image.transpose(0, 2, 3, 1, 4, 5)
+        strided_image = strided_image.reshape(-1, channels * fh * fw)
+    else:
+        strided_image = strided_image.reshape(batch, channels, output_height, output_width, -1)
+    return strided_image
 
 def col2im(cols, output_shape, filter_size: tuple[int, int], stride: int):
     batch, channels, height, width = output_shape

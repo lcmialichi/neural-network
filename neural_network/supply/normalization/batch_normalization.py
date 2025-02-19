@@ -64,9 +64,9 @@ class BatchNormalization:
     
     def batch_norm_backward(self, dout):
         if self.cached_bn is None:
-            raise RuntimeError("Backward chamado sem forward em modo de treino.")
+            raise RuntimeError("no cached bactch normalization in batch_norm_backward.")
 
-        x, x_hat, batch_mean, batch_var, reduction_axes, m = self.cached_bn
+        _, x_hat, _, batch_var, reduction_axes, m = self.cached_bn
 
         dgamma = driver.gcpu.sum(dout * x_hat, axis=reduction_axes, keepdims=True) if self.scale else driver.gcpu.zeros_like(self._gamma)
         dbeta = driver.gcpu.sum(dout, axis=reduction_axes, keepdims=True) if self.center else driver.gcpu.zeros_like(self._beta)

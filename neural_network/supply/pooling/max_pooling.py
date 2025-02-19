@@ -11,10 +11,11 @@ class MaxPooling(Pooling):
 
     def apply_pooling(self, input):
         batch_size, channels, height, width = input.shape
-        
-        self.input_shape = (height, width)
-        output_height = (height  - self.shape[0]) // self.stride + 1
-        output_width = (width  - self.shape[1]) // self.stride + 1
+
+        self.input_shape = input.shape
+
+        output_height = (height - self.shape[0]) // self.stride + 1
+        output_width = (width - self.shape[1]) // self.stride + 1
 
         col = im2col(input, self.shape, self.stride)
         col = col.reshape(batch_size, channels, output_height, output_width, -1)
@@ -22,39 +23,37 @@ class MaxPooling(Pooling):
         max_vals = driver.gcpu.max(col, axis=-1)
         max_idxs = driver.gcpu.argmax(col, axis=-1)
 
-        row_indices = max_idxs // self.shape[1]
-        col_indices = max_idxs % self.shape[1]
-
-        row_offsets = driver.gcpu.arange(0, output_height * self.stride, self.stride)[:, None]
-        col_offsets = driver.gcpu.arange(0, output_width * self.stride, self.stride)[None, :]
-
-        row_indices += row_offsets
-        col_indices += col_offsets
-        
-        row_indices = driver.gcpu.clip(row_indices + row_offsets, 0, height - 1)
-        col_indices = driver.gcpu.clip(col_indices + col_offsets, 0, width - 1)
-
-        pooled_indexes = driver.gcpu.stack([row_indices, col_indices], axis=-1)
-        self.cached_pooling_indexes = pooled_indexes
+        self.cached_pooling_indexes = max_idxs
 
         return max_vals
-    
-    def unpooling(self, grad):
-        pool_cache = self.cached_pooling_indexes
-        batch_size, channels, _, _ = grad.shape
 
-        unpooled_grad = driver.gcpu.zeros((batch_size, channels, self.input_shape[0], self.input_shape[1]))
-        
+    def unpooling(self, grad):
+        if self.cached_pooling_indexes is None:
+            raise RuntimeError("No cached max-pooling indexes available for unpooling.")
+
+        batch_size, channels, output_height, output_width = grad.shape
+        _, _, input_height, input_width = self.input_shape
+
+        unpooled_grad = driver.gcpu.zeros((batch_size, channels, input_height, input_width))
+
         batch_indices, channel_indices = driver.gcpu.meshgrid(
             driver.gcpu.arange(batch_size), driver.gcpu.arange(channels), indexing="ij"
         )
-        
-        row_indices = driver.gcpu.clip(pool_cache[..., 0], 0, self.input_shape[0] - 1)
-        col_indices = driver.gcpu.clip(pool_cache[..., 1], 0, self.input_shape[1] - 1)
+
+        window_starts_i = (driver.gcpu.arange(output_height) * self.stride).reshape(1, 1, -1, 1)
+        window_starts_j = (driver.gcpu.arange(output_width) * self.stride).reshape(1, 1, 1, -1)
+
+        row_indices_rel, col_indices_rel = driver.gcpu.unravel_index(self.cached_pooling_indexes, self.shape)
+
+        row_indices_abs = window_starts_i + row_indices_rel
+        col_indices_abs = window_starts_j + col_indices_rel
+
+        row_indices_abs = driver.gcpu.clip(row_indices_abs, 0, input_height - 1)
+        col_indices_abs = driver.gcpu.clip(col_indices_abs, 0, input_width - 1)
 
         batch_indices = batch_indices[..., None, None]
         channel_indices = channel_indices[..., None, None]
 
-        unpooled_grad[batch_indices, channel_indices, row_indices, col_indices] = grad
+        driver.gcpu.add.at(unpooled_grad, (batch_indices, channel_indices, row_indices_abs, col_indices_abs), grad)
 
         return unpooled_grad
