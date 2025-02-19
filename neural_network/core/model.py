@@ -44,7 +44,7 @@ class Model(BaseNetwork):
         for i in range(len(self._blocks) - 1, -1, -1):
             block = self._blocks[i]
             input_layer = x if i == 0 else self._block_output[i - 1]
-            delta_conv = block.backward(input_layer,y, delta_conv)
+            delta_conv = block.backward(input_layer, y, delta_conv)
         return delta_conv
 
     def train(self, x_batch, y_batch):

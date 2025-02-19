@@ -18,7 +18,6 @@ class Chart:
         self.ema_accuracies = []
         self.alpha = 0.1
 
-
         plt.ion()
         plt.style.use('ggplot')
         self.fig, self.ax1 = plt.subplots(figsize=(8, 6))
