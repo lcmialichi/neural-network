@@ -60,7 +60,7 @@ class Layer(Block):
             delta *= self.get_activation().derivate(self.logits())
 
         grad_weight = input_layer.T.dot(delta)
-        grad_bias = driver.gcpu.sum(delta, axis=0, keepdims=True)
+        grad_bias = driver.gcpu.sum(delta, axis=0)
 
         if self.has_gradients_clipped():
             min_c, max_c = self.get_clip_gradients()
