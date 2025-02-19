@@ -25,11 +25,11 @@ class Model(BaseNetwork):
         self._num_predictions = 0
         driver.gcpu.random.seed(42)
         
-
     def forward(self, x):
         self._block_output.clear()
         output = x
         for block in self._blocks:
+            self.set_hyper_params(block)
             if self._num_predictions == 0:
                 self.boot_block(block, output.shape)
 
@@ -57,7 +57,6 @@ class Model(BaseNetwork):
             self._storage.store(self)
 
     def boot_block(self, block, shape: tuple):
-        self.set_hyper_params(block)
         if hasattr(block, 'boot'):
             block.boot(shape)
 
