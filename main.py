@@ -39,25 +39,25 @@ def create_configuration():
     config.loss_function(attr.CrossEntropyLoss())
 
     # ---- Convolutional Layers ----'
-    kernel = config.add_kernel(number=32, shape=(3, 3), stride=1, bias=False)
+    kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(2, 2), stride=2)
 
-    kernel = config.add_kernel(number=64, shape=(3, 3), stride=1, bias=False)
+    kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
 
-    kernel = config.add_kernel(number=128, shape=(3, 3), stride=1, bias=False)
+    kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
     kernel.max_pooling(shape=(3, 3), stride=2)
 
-    kernel = config.add_kernel(number=128, shape=(3, 3), stride=1, bias=False)
+    kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
