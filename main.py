@@ -32,7 +32,7 @@ def create_configuration():
         )
     )
 
-    config.driver('cpu')
+    config.driver('gpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='/content/drive/MyDrive/data/cache/model.pkl')
     config.padding_type(Padding.SAME)
@@ -71,8 +71,8 @@ def create_configuration():
     layer1.activation(attr.Relu())
     
     # Output Layer
-    output = dense.add_layer(size=2)
-    output.activation(attr.Softmax())
+    output = dense.add_layer(size=1)
+    output.activation(attr.Sigmoid())
     output.initializer(attr.XavierUniform())
     
     return config
