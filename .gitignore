@@ -1,6 +1,3 @@
-data/*
-!data/cache/
-!data/cache/**
 __pycache__/
 *.pyc
 neural_network.egg-info
