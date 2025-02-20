@@ -16,6 +16,7 @@ def im2col(image, filter_size: tuple[int, int], stride: int):
         image.strides[2]
     )
     
+    image = driver.gcpu.ascontiguousarray(image)
     strided_image = driver.gcpu.lib.stride_tricks.as_strided(
         image,
         shape=(batch, output_height, output_width, fh, fw, channels),

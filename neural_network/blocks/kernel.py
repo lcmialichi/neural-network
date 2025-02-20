@@ -57,7 +57,7 @@ class Kernel(Block):
         self._bias = self._initializer.kernel_bias(self.number)
 
     def boot(self, shape: tuple):
-        self._filters = self._initializer.kernel_filters(self.number, self.shape, shape[1])
+        self._filters = self._initializer.kernel_filters(self.number, self.shape, shape[-1])
         self._bias = self._initializer.kernel_bias(self.number)
     
     def forward(self, x):
@@ -67,7 +67,7 @@ class Kernel(Block):
         self.clear_logits()
         logit = conv(x, self.filters(), self.stride, self.padding_type)
         if self._apply_bias:
-            logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
+            logit += self.bias()[driver.gcpu.newaxis, driver.gcpu.newaxis, driver.gcpu.newaxis, :]
        
         conv_output = logit
         
@@ -112,7 +112,7 @@ class Kernel(Block):
 
         grad_bias = driver.gcpu.sum(delta, axis=(0, 2, 3))
         batch_size, _, output_h, output_w = delta.shape
-        input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride, for_conv=True)
+        input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
         delta_reshaped = delta.reshape(batch_size * output_h * output_w, num_filters)
         grad_filter = driver.gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
         

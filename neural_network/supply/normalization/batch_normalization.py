@@ -43,7 +43,7 @@ class BatchNormalization:
     def update_beta(self, beta):
         self._beta = beta
 
-    def batch_normalize(self, x, training=False):
+    def forward(self, x, training=False):
         reduction_axes = tuple(i for i in range(x.ndim) if i != self.axis)
         m = x.size // x.shape[self.axis]
         
@@ -69,7 +69,7 @@ class BatchNormalization:
         self.cached_bn = (x, normalized, batch_mean, batch_var, inv, reduction_axes, m)
         return x_hat
 
-    def batch_norm_backward(self, dout):
+    def backward(self, dout):
         if self.cached_bn is None:
             raise RuntimeError("No cached batch normalization data for backward pass.")
 

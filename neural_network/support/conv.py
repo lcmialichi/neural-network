@@ -3,18 +3,24 @@ from neural_network.core.padding import Padding
 from .image import im2col
 
 def conv(input_layer, filters, stride: int, padding_type: Padding):
-    batch_size = input_layer.shape[0]
-    in_height, in_width = input_layer.shape[1], input_layer.shape[2]
+    batch_size, in_height, in_width, _ = input_layer.shape
+ 
     fh, fw, _, out_channels = filters.shape
+
     padding = get_padding((in_height, in_width), (fh, fw), stride, padding_type)
     input_padded = add_padding(input_layer, padding)
+
     col = im2col(input_padded, (fh, fw), stride)
+
     filters_reshaped = filters.reshape(-1, out_channels)
+
     conv_output = driver.gcpu.matmul(col, filters_reshaped)
+
     output_height = (in_height + padding[0][0] + padding[0][1] - fh) // stride + 1
     output_width = (in_width + padding[1][0] + padding[1][1] - fw) // stride + 1
-    
-    return conv_output.reshape(batch_size, output_height, output_width, out_channels)
+    conv_output = conv_output.reshape(batch_size, output_height, output_width, out_channels)
+
+    return conv_output
 
 def get_padding(input_shape: tuple[int, int], filter_shape: tuple[int, int], stride: int = 1, padding_type = Padding.SAME) -> tuple[int, int]:
         if padding_type == Padding.SAME:
