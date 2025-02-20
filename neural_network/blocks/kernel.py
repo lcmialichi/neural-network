@@ -65,7 +65,7 @@ class Kernel(Block):
             self.boot(x.shape)
 
         self.clear_logits()
-        logit = conv(x, self.filters(), self.number, self.stride, self.shape, self.padding_type)
+        logit = conv(x, self.filters(), self.stride, self.padding_type)
         if self._apply_bias:
             logit += self.bias()[:, driver.gcpu.newaxis, driver.gcpu.newaxis]
        
@@ -75,7 +75,7 @@ class Kernel(Block):
             conv_output = self.get_activation().activate(conv_output)
 
         if self.has_batch_normalization():
-            conv_output = self.get_batch_normalization().batch_normalize(
+            conv_output = self.get_batch_normalization().forward(
                 x=conv_output, training=self.mode == 'train'
             )
             
@@ -99,7 +99,7 @@ class Kernel(Block):
 
         if self.has_batch_normalization():
             bn = self.get_batch_normalization()
-            delta, dgamma, dbeta = bn.batch_norm_backward(delta)
+            delta, dgamma, dbeta = bn.backward(delta)
             bn.update_gamma(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gamma(), dgamma, weight_decay=False))
             bn.update_beta(self.get_optimizer().update(f'bn_beta_{self.kernel_id}', bn.get_beta(), dbeta, weight_decay=False))
 
@@ -126,7 +126,7 @@ class Kernel(Block):
             
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
 
-        flipped_filters = driver.gcpu.flip(filters, axis=(2, 3))
+        flipped_filters = driver.gcpu.flip(filters, axis=(0, 1))
         delta_col = driver.gcpu.matmul(
             delta.reshape(batch_size * output_h * output_w, num_filters), 
             flipped_filters.reshape(num_filters, -1)

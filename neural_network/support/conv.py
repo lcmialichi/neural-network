@@ -2,19 +2,20 @@ from neural_network.gcpu import driver
 from neural_network.core.padding import Padding
 from .image import im2col
 
-def conv(input_layer, filters, number: int, stride: int, shape: tuple[int, int], padding_type: Padding):
-    expected_filter_shape = (number, input_layer.shape[1], shape[0], shape[1])
-    assert filters.shape == expected_filter_shape, f"Filters shape {filters.shape} != {expected_filter_shape}"
+def conv(input_layer, filters, stride: int, padding_type: Padding):
     
-    batch_size, _, i_h, i_w = input_layer.shape  
-    padding = get_padding((i_h, i_w), shape, stride, padding_type)
+    batch_size = input_layer.shape[0]
+    in_height, in_width = input_layer.shape[1], input_layer.shape[2]
+    fh, fw, _, out_channels = filters.shape
+    padding = get_padding((in_height, in_width), (fh, fw), stride, padding_type)
     input_padded = add_padding(input_layer, padding)
-    col = im2col(input_padded, shape, stride, for_conv=True)
-    filters_reshaped = filters.reshape(number, -1)
-    conv_output = driver.gcpu.matmul(filters_reshaped, col.T)
-    output_height, output_width = get_output_size(i_h, i_w, shape, stride, padding)
-    conv_output = conv_output.T.reshape(batch_size, number, output_height, output_width)
-    return conv_output
+    col = im2col(input_padded, (fh, fw), stride)
+    filters_reshaped = filters.reshape(-1, out_channels)
+    conv_output = driver.gcpu.matmul(col, filters_reshaped)
+    output_height = (in_height + padding[0][0] + padding[0][1] - fh) // stride + 1
+    output_width = (in_width + padding[1][0] + padding[1][1] - fw) // stride + 1
+    
+    return conv_output.reshape(batch_size, output_height, output_width, out_channels)
 
 def get_padding(input_shape: tuple[int, int], filter_shape: tuple[int, int], stride: int = 1, padding_type = Padding.SAME) -> tuple[int, int]:
         if padding_type == Padding.SAME:
@@ -35,15 +36,14 @@ def get_padding(input_shape: tuple[int, int], filter_shape: tuple[int, int], str
 def add_padding(input_layer, padding: tuple[tuple[int, int], tuple[int, int]]):
     return driver.gcpu.pad(
         input_layer,
-        ((0, 0), (0, 0), padding[0], padding[1]),
+        ((0, 0), padding[0], padding[1], (0, 0)),
         mode="constant",
         constant_values=0
     )
-    
-def get_output_size(height: int, width: int, filter_shape: tuple[int, int], stride: int = 1, 
-                         padding: tuple[tuple[int, int], tuple[int, int]] = ((0, 0), (0, 0))) -> tuple[int, int]:
-        pad_x = padding[0][0] + padding[0][1]
-        pad_y = padding[1][0] + padding[1][1]
-        output_height = (height + pad_x - filter_shape[0]) // stride + 1
-        output_width = (width + pad_y - filter_shape[1]) // stride + 1
-        return int(output_height), int(output_width)
+
+def get_output_size(input_size: tuple[int, int], filter_size: tuple[int, int], 
+                   stride: int, padding: tuple[tuple[int, int]]):
+    return (
+        (input_size[0] + padding[0][0] + padding[0][1] - filter_size[0]) // stride + 1,
+        (input_size[1] + padding[1][0] + padding[1][1] - filter_size[1]) // stride + 1
+    )

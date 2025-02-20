@@ -20,7 +20,7 @@ class CrossEntropyLoss:
         elif self.reduction == 'none':
             return per_sample_loss
         else:
-            raise ValueError(f"Redução inválida: {self.reduction}")
+            raise ValueError(f"Invalid reduction: {self.reduction}")
     
     def accuracy(self, y_pred, y_true) -> float:
         return driver.gcpu.mean(driver.gcpu.argmax(y_pred, axis=1) == driver.gcpu.argmax(y_true, axis=1))
