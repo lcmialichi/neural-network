@@ -1,22 +1,35 @@
 from neural_network.gcpu import driver
 
 class BatchNormalization:
-  from neural_network.gcpu import driver
-
-class BatchNormalization:
-    def __init__(self, num_features: int, epsilon=1e-3, momentum=0.99, axis=-1):
+    def __init__(self, 
+        num_filters: int, 
+        axis: int = -1,
+        gamma: float = 1.0,
+        beta: float = 0.0,
+        momentum: float = 0.99, 
+        epsilon: float = 1e-3, 
+        center: bool = True, 
+        scale: bool = True,
+        trainable: bool = True
+    ):
         self.axis = axis
-        self.epsilon = epsilon
+        self.trainable = trainable
+        self.center = center
+        self.scale = scale
+        self._epsilon = epsilon
         self.momentum = momentum
         
-        self.gamma = driver.gcpu.ones((1, 1, 1, num_features))
-        self.beta = driver.gcpu.zeros((1, 1, 1, num_features))
-        
-        self.running_mean = driver.gcpu.zeros((1, 1, 1, num_features))
-        self.running_var = driver.gcpu.ones((1, 1, 1, num_features))
-        
-        self.cache = None
+        param_shape = [1] * 4
+        param_shape[axis] = num_filters
+        param_shape = tuple(param_shape)
 
+        self._gamma = driver.gcpu.full(param_shape, gamma) if scale else driver.gcpu.ones(param_shape)
+        self._beta = driver.gcpu.full(param_shape, beta) if center else driver.gcpu.zeros(param_shape)
+        
+        self.running_mean = driver.gcpu.zeros(param_shape)
+        self.running_var = driver.gcpu.ones(param_shape)
+        
+        self.cached_bn = None
 
     def get_gamma(self):
         return self._gamma
@@ -30,37 +43,52 @@ class BatchNormalization:
     def update_beta(self, beta):
         self._beta = beta
 
-    def forward(self, x, training=True):
+    def batch_normalize(self, x, training=False):
+        reduction_axes = tuple(i for i in range(x.ndim) if i != self.axis)
+        m = x.size // x.shape[self.axis]
+        
         if training:
-            mean = driver.gcpu.mean(x, axis=(0, 1, 2), keepdims=True)
-            var = driver.gcpu.var(x, axis=(0, 1, 2), keepdims=True, ddof=0)
+            batch_mean = driver.gcpu.mean(x, axis=reduction_axes, keepdims=True)
+            batch_var = driver.gcpu.var(x, axis=reduction_axes, keepdims=True, ddof=0)
             
-            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * mean
-            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * var
+            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
+            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var
         else:
-            mean = self.running_mean
-            var = self.running_var
+            batch_mean = self.running_mean
+            batch_var = self.running_var
         
-        x_hat = (x - mean) / driver.gcpu.sqrt(var + self.epsilon)
-        out = self.gamma * x_hat + self.beta
+        inv = driver.gcpu.reciprocal(driver.gcpu.sqrt(batch_var + self._epsilon))
+        normalized = (x - batch_mean) * inv
         
-        if training:
-            self.cache = (x, x_hat, mean, var)
-        
-        return out
+        x_hat = normalized
+        if self.scale:
+            x_hat = x_hat * self._gamma
+        if self.center:
+            x_hat = x_hat + self._beta
 
-    def backward(self, dout):
-        x, x_hat, mean, var = self.cache
-        m = x.shape[0] * x.shape[1] * x.shape[2]
+        self.cached_bn = (x, normalized, batch_mean, batch_var, inv, reduction_axes, m)
+        return x_hat
+
+    def batch_norm_backward(self, dout):
+        if self.cached_bn is None:
+            raise RuntimeError("No cached batch normalization data for backward pass.")
+
+        _, normalized, _, _, inv, reduction_axes, m = self.cached_bn
+
+        if self.scale:
+            dgamma = driver.gcpu.sum(dout * normalized, axis=reduction_axes, keepdims=True)
+            dx_hat = dout * self._gamma
+        else:
+            dgamma = None
+            dx_hat = dout
         
-        dgamma = driver.gcpu.sum(dout * x_hat, axis=(0, 1, 2), keepdims=True)
-        dbeta = driver.gcpu.sum(dout, axis=(0, 1, 2), keepdims=True)
-        
-        inv_std = 1 / driver.gcpu.sqrt(var + self.epsilon)
-        dx_hat = dout * self.gamma
-        dvar = driver.gcpu.sum(dx_hat * (x - mean) * -0.5 * inv_std**3, axis=(0, 1, 2), keepdims=True)
-        dmean = driver.gcpu.sum(dx_hat * -inv_std, axis=(0, 1, 2), keepdims=True) + dvar * driver.gcpu.sum(-2 * (x - mean), axis=(0, 1, 2), keepdims=True) / m
-        
-        dx = (dx_hat * inv_std) + (dvar * 2 * (x - mean) / m) + (dmean / m)
-        
+        if self.center:
+            dbeta = driver.gcpu.sum(dout, axis=reduction_axes, keepdims=True)
+        else:
+            dbeta = None
+
+        sum_dxhat = driver.gcpu.sum(dx_hat, axis=reduction_axes, keepdims=True)
+        sum_dxhat_normalized = driver.gcpu.sum(dx_hat * normalized, axis=reduction_axes, keepdims=True)
+        dx = (1. / m) * inv * (m * dx_hat - sum_dxhat - normalized * sum_dxhat_normalized)
+
         return dx, dgamma, dbeta

@@ -3,7 +3,6 @@ from neural_network.core.padding import Padding
 from .image import im2col
 
 def conv(input_layer, filters, stride: int, padding_type: Padding):
-    
     batch_size = input_layer.shape[0]
     in_height, in_width = input_layer.shape[1], input_layer.shape[2]
     fh, fw, _, out_channels = filters.shape
