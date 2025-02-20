@@ -71,7 +71,7 @@ class Block(Propagable):
             trainable: bool = True
     ) -> None:
         self._batch_normalization = normalization.BatchNormalization(
-            num_features=self.number, 
+            num_filters=self.number, 
             gamma=gamma, 
             beta=beta, 
             momentum=momentum,
