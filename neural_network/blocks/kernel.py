@@ -103,7 +103,6 @@ class Kernel(Block):
             bn.update_gamma(self.get_optimizer().update(f'bn_gamma_{self.kernel_id}', bn.get_gamma(), dgamma, weight_decay=False))
             bn.update_beta(self.get_optimizer().update(f'bn_beta_{self.kernel_id}', bn.get_beta(), dbeta, weight_decay=False))
 
-            
         if self.has_activation():
             delta *= self.get_activation().derivate(self.logits())
 

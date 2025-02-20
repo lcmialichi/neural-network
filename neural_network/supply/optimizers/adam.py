@@ -7,7 +7,7 @@ class Adam(Optimizer):
         learning_rate=0.001,
         beta1=0.9,
         beta2=0.999,
-        epsilon=1e-7,
+        epsilon=1e-07,
         weight_decay=0.0,
         amsgrad=False,
     ):
@@ -31,28 +31,21 @@ class Adam(Optimizer):
 
         if self.weight_decay != 0 and weight_decay:
             grad = grad + self.weight_decay * param
-            
+
         self.m[param_name] = self.beta1 * self.m[param_name] + (1 - self.beta1) * grad
         self.v[param_name] = self.beta2 * self.v[param_name] + (1 - self.beta2) * (grad ** 2)
 
-        local_step = self.iterations + 1
-        beta1_power = driver.gcpu.power(self.beta1, local_step)
-        beta2_power = driver.gcpu.power(self.beta2, local_step)
-
-        lr_corrected = self.learning_rate * driver.gcpu.sqrt(1 - beta2_power)
-        lr_corrected = lr_corrected / (1 - beta1_power)
+        t = self.iterations + 1
+        m_hat = self.m[param_name] / (1 - driver.gcpu.power(self.beta1, t))
+        v_hat = self.v[param_name] / (1 - driver.gcpu.power(self.beta2, t))
 
         if self.amsgrad:
-            self.v_hat[param_name] = driver.gcpu.maximum(
-                self.v_hat[param_name], self.v[param_name]
-            )
+            self.v_hat[param_name] = driver.gcpu.maximum(self.v_hat[param_name], v_hat)
             v_final = self.v_hat[param_name]
         else:
-            v_final = self.v[param_name]
+            v_final = v_hat
 
-        param_update = -lr_corrected * self.m[param_name]
-        param_update = param_update / (driver.gcpu.sqrt(v_final) + self.epsilon)
-
+        param_update = -self.learning_rate * m_hat / (driver.gcpu.sqrt(v_final) + self.epsilon)
         return param + param_update
 
     def step(self):

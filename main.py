@@ -26,8 +26,8 @@ def create_configuration():
                 'rotation': 20,
                 'zoom': 0.2,
                 'horizontal_flip': True,
-                'vertical_flip': True,
-                'shear': 0.2
+                'shear': 0.2,
+                'fill_mode': 'nearest'
             }
         )
     )
