@@ -26,6 +26,7 @@ class DriverLoader:
     def gcpu(self):
         if self._module is None:
             self._module = import_module()
+            self._module.float_ = self._module.float32
         return self._module
 
 driver = DriverLoader()

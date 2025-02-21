@@ -23,11 +23,11 @@ class BatchNormalization:
         param_shape[axis] = num_filters
         param_shape = tuple(param_shape)
 
-        self._gamma = driver.gcpu.full(param_shape, gamma, dtype=driver.gcpu.float64) if scale else driver.gcpu.ones(param_shape, dtype=driver.gcpu.float64)
-        self._beta = driver.gcpu.full(param_shape, beta, dtype=driver.gcpu.float64) if center else driver.gcpu.zeros(param_shape, dtype=driver.gcpu.float64)
+        self._gamma = driver.gcpu.full(param_shape, gamma,) if scale else driver.gcpu.ones(param_shape,)
+        self._beta = driver.gcpu.full(param_shape, beta,) if center else driver.gcpu.zeros(param_shape,)
         
-        self.running_mean = driver.gcpu.zeros(param_shape, dtype=driver.gcpu.float64)
-        self.running_var = driver.gcpu.ones(param_shape, dtype=driver.gcpu.float64)
+        self.running_mean = driver.gcpu.zeros(param_shape,)
+        self.running_var = driver.gcpu.ones(param_shape,)
         
         self.cached_bn = None
 

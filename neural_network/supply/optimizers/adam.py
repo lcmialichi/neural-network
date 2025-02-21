@@ -24,12 +24,12 @@ class Adam(Optimizer):
 
     def update(self, param_name: str, param, grad, weight_decay: bool = True):
         if param_name not in self.m:
-            self.m[param_name] = driver.gcpu.zeros_like(param, dtype=driver.gcpu.float64)
-            self.v[param_name] = driver.gcpu.zeros_like(param, dtype=driver.gcpu.float64)
+            self.m[param_name] = driver.gcpu.zeros_like(param,)
+            self.v[param_name] = driver.gcpu.zeros_like(param,)
             if self.amsgrad:
-                self.v_hat[param_name] = driver.gcpu.full_like(param, -driver.gcpu.inf, dtype=driver.gcpu.float64)
+                self.v_hat[param_name] = driver.gcpu.full_like(param, -driver.gcpu.inf,)
 
-        if self.weight_decay != 0 and weight_decay:
+        if self.weight_decay > 0 and weight_decay:
             param = param - self.learning_rate * self.weight_decay * param
 
         self.m[param_name] = self.beta1 * self.m[param_name] + (1 - self.beta1) * grad
