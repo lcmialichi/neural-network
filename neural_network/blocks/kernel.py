@@ -109,15 +109,14 @@ class Kernel(Block):
             
         padding = get_padding(
             (input_layer.shape[1], input_layer.shape[2]), (fh, fw), self.stride, self.padding_type
-        )         
+        )
 
         grad_bias = driver.gcpu.sum(delta, axis=(0, 1, 2))
         batch_size, output_h, output_w, _ = delta.shape
         input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
         
         delta_reshaped = delta.reshape(batch_size * output_h * output_w, num_filters)
-        grad_filter = driver.gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
-   
+        grad_filter = driver.gcpu.matmul(input_reshaped.T, delta_reshaped).reshape(filters.shape)   
         if self.has_gradients_clipped():
             min_c, max_c = self.get_clip_gradients()
             grad_filter = driver.gcpu.clip(grad_filter, min_c, max_c)
@@ -128,20 +127,19 @@ class Kernel(Block):
             
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
 
-        flipped_filters = driver.gcpu.flip(filters, axis=(0, 1))
-        delta_col = driver.gcpu.matmul(
-            delta.reshape(batch_size * output_h * output_w, num_filters), 
-            flipped_filters.reshape(num_filters, -1)
-        )
+        flipped_filters = driver.gcpu.transpose(filters, (2, 0, 1, 3))
+        flipped_filters = driver.gcpu.flip(flipped_filters, axis=(1, 2))
+        
+        delta_col = driver.gcpu.matmul(delta_reshaped, flipped_filters.reshape(num_filters, -1))
      
         delta = delta_col.reshape(batch_size, output_h, output_w, fh, fw, input_channels)
-        delta = delta.transpose(0, 1, 2, 5, 3, 4).sum(axis=(4, 5))
+        delta = driver.gcpu.sum(delta, axis=(3, 4))
 
         if self.stride > 1:
             expanded_delta = driver.gcpu.zeros(
-                (batch_size, num_filters, output_h * self.stride, output_w * self.stride)
+                (batch_size, output_h * self.stride, output_w * self.stride, input_channels)
             )
-            expanded_delta[:, :, ::self.stride, ::self.stride] = delta
+            expanded_delta[:, ::self.stride, ::self.stride, :] = delta
             delta = expanded_delta
-        
+            
         return delta

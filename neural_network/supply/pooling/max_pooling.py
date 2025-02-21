@@ -17,9 +17,9 @@ class MaxPooling(Pooling):
         output_width = (width - self.shape[1]) // self.stride + 1
 
         col = im2col(input, self.shape, self.stride)
-        col = col.reshape(batch_size, output_height, output_width, channels, -1)
+        col = col.reshape(batch_size, output_height, output_width, self.shape[0], self.shape[1], channels)
+        max_vals = driver.gcpu.max(col, axis=(3,4))
 
-        max_vals = driver.gcpu.max(col, axis=-1)
         max_idxs = driver.gcpu.argmax(col, axis=-1)
 
         self.cached_pooling_indexes = max_idxs

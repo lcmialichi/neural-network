@@ -23,16 +23,9 @@ class BatchNormalization:
         param_shape[axis] = num_filters
         param_shape = tuple(param_shape)
 
-        if self.scale:
-            self._gamma = driver.gcpu.full(param_shape, gamma, requires_grad=self.trainable)
-        else:
-            self._gamma = driver.gcpu.ones(param_shape, requires_grad=False) * gamma
-
-        if self.center:
-            self._beta = driver.gcpu.full(param_shape, beta, requires_grad=self.trainable)
-        else:
-            self._beta = driver.gcpu.zeros(param_shape, requires_grad=False) * beta
-
+        self._gamma = driver.gcpu.full(param_shape, gamma) if scale else driver.gcpu.ones(param_shape)
+        self._beta = driver.gcpu.full(param_shape, beta) if center else driver.gcpu.zeros(param_shape)
+        
         self.running_mean = driver.gcpu.zeros(param_shape)
         self.running_var = driver.gcpu.ones(param_shape)
         
@@ -88,3 +81,15 @@ class BatchNormalization:
         dx = (1. / m) * inv * (m * dx_hat - sum_dxhat - normalized * sum_dxhat_normalized)
 
         return dx, dgamma, dbeta
+
+    def get_gamma(self):
+        return self._gamma
+
+    def update_gamma(self, gamma):
+        self._gamma = gamma
+
+    def get_beta(self):
+        return self._beta
+
+    def update_beta(self, beta):
+        self._beta = beta
