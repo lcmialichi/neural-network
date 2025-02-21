@@ -9,17 +9,23 @@ def im2col(image, filter_size: tuple[int, int], stride: int):
 
     image = driver.gcpu.ascontiguousarray(image)
     
-    col_shape = (batch, output_height, output_width, fh, fw, channels)
-    col = driver.gcpu.zeros(col_shape, dtype=image.dtype)
+    new_shape = (batch, output_height, output_width, fh, fw, channels)
+    new_strides = (
+        image.strides[0],
+        image.strides[1] * stride,
+        image.strides[2] * stride,
+        image.strides[1],
+        image.strides[2],
+        image.strides[3]
+    )
     
-    for b in range(batch):
-        for y in range(output_height):
-            for x in range(output_width):
-                for fy in range(fh):
-                    for fx in range(fw):
-                        col[b, y, x, fy, fx, :] = image[b, y * stride + fy, x * stride + fx, :]
+    col = driver.gcpu.lib.stride_tricks.as_strided(
+        image, 
+        shape=new_shape, 
+        strides=new_strides
+    )
     
-    return col.reshape(batch * output_height * output_width, fh * fw * channels)
+    return col.reshape(-1, fh * fw * channels)
 
 def col2im(cols, output_shape, filter_size: tuple[int, int], stride: int):
     batch, channels, height, width = output_shape

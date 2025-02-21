@@ -67,6 +67,7 @@ def test_forward_pass():
     kernel.padding_type = Padding.SAME
 
     output = kernel.forward(input_layer)
+    print(output)
 
 
 GlobalConfig().set_driver(Driver['cpu'])
