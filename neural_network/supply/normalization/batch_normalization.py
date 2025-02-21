@@ -23,36 +23,32 @@ class BatchNormalization:
         param_shape[axis] = num_filters
         param_shape = tuple(param_shape)
 
-        self._gamma = driver.gcpu.full(param_shape, gamma) if scale else driver.gcpu.ones(param_shape)
-        self._beta = driver.gcpu.full(param_shape, beta) if center else driver.gcpu.zeros(param_shape)
-        
+        if self.scale:
+            self._gamma = driver.gcpu.full(param_shape, gamma, requires_grad=self.trainable)
+        else:
+            self._gamma = driver.gcpu.ones(param_shape, requires_grad=False) * gamma
+
+        if self.center:
+            self._beta = driver.gcpu.full(param_shape, beta, requires_grad=self.trainable)
+        else:
+            self._beta = driver.gcpu.zeros(param_shape, requires_grad=False) * beta
+
         self.running_mean = driver.gcpu.zeros(param_shape)
         self.running_var = driver.gcpu.ones(param_shape)
         
         self.cached_bn = None
 
-    def get_gamma(self):
-        return self._gamma
-
-    def update_gamma(self, gamma):
-        self._gamma = gamma
-
-    def get_beta(self):
-        return self._beta
-
-    def update_beta(self, beta):
-        self._beta = beta
-
     def forward(self, x, training=False):
         reduction_axes = tuple(i for i in range(x.ndim) if i != self.axis)
-        m = x.size // x.shape[self.axis]
+        m = x.shape[reduction_axes[0]] * x.shape[reduction_axes[1]] * x.shape[reduction_axes[2]]  # N*H*W
         
         if training:
             batch_mean = driver.gcpu.mean(x, axis=reduction_axes, keepdims=True)
-            batch_var = driver.gcpu.var(x, axis=reduction_axes, keepdims=True, ddof=0)
+            batch_var = driver.gcpu.var(x, axis=reduction_axes, keepdims=True, ddof=1)
             
-            self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
-            self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var
+            if self.trainable:
+                self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * batch_mean
+                self.running_var = self.momentum * self.running_var + (1 - self.momentum) * batch_var
         else:
             batch_mean = self.running_mean
             batch_var = self.running_var
@@ -73,16 +69,16 @@ class BatchNormalization:
         if self.cached_bn is None:
             raise RuntimeError("No cached batch normalization data for backward pass.")
 
-        _, normalized, _, _, inv, reduction_axes, m = self.cached_bn
+        x, normalized, _, _, inv, reduction_axes, m = self.cached_bn
 
-        if self.scale:
+        if self.scale and self.trainable:
             dgamma = driver.gcpu.sum(dout * normalized, axis=reduction_axes, keepdims=True)
             dx_hat = dout * self._gamma
         else:
             dgamma = None
             dx_hat = dout
         
-        if self.center:
+        if self.center and self.trainable:
             dbeta = driver.gcpu.sum(dout, axis=reduction_axes, keepdims=True)
         else:
             dbeta = None
