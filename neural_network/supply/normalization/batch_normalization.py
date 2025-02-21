@@ -32,7 +32,8 @@ class BatchNormalization:
         self.cached_bn = None
 
     def forward(self, x, training=False):
-        reduction_axes = tuple(i for i in range(x.ndim) if i != self.axis)
+        positive_axis = self.axis % x.ndim
+        reduction_axes = tuple(i for i in range(x.ndim) if i != positive_axis)
         m = x.shape[reduction_axes[0]] * x.shape[reduction_axes[1]] * x.shape[reduction_axes[2]]
         
         if training:
