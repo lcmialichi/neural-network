@@ -6,16 +6,16 @@ class HeUniform(Initialization):
     def generate_layer(self, input_size: int, size: int) -> list:
         generator = driver.gcpu.random
         limit = driver.gcpu.sqrt(6 / input_size)
-        return generator.uniform(-limit, limit, (input_size, size))
+        return generator.uniform(-limit, limit, (input_size, size), dtype=driver.gcpu.float64)
 
     def kernel_filters(self, filter_number: int, filter_shape: tuple[int, int], channels_number: int):
         generator = driver.gcpu.random
         fan_in = channels_number * filter_shape[0] * filter_shape[1]
         limit = driver.gcpu.sqrt(6.0 / fan_in)
-        return generator.uniform(-limit, limit, (*filter_shape, channels_number, filter_number))
+        return generator.uniform(-limit, limit, (*filter_shape, channels_number, filter_number),dtype=driver.gcpu.float64)
         
     def generate_layer_bias(self, size: int) -> list:
-        return driver.gcpu.zeros(size)
+        return driver.gcpu.zeros(size, dtype=driver.gcpu.float64)
     
     def kernel_bias(self, number: int):
-        return driver.gcpu.zeros(number)
+        return driver.gcpu.zeros(number, dtype=driver.gcpu.float64)

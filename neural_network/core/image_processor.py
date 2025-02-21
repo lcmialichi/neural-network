@@ -78,7 +78,7 @@ class ImageProcessor(Processor):
             if self.augmentation and apply_mask:
                 image = self._apply_augmentations(image)
 
-            img_data = driver.gcpu.array(image.resize(self.image_size))
+            img_data = driver.gcpu.array(image.resize(self.image_size), dtype=driver.gcpu.float64)
             return img_data
         except Exception as e:
             raise SystemError(f"Unable to process the image {image_path}: {e}")

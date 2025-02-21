@@ -27,10 +27,10 @@ class Adam(Optimizer):
             self.m[param_name] = driver.gcpu.zeros_like(param)
             self.v[param_name] = driver.gcpu.zeros_like(param)
             if self.amsgrad:
-                self.v_hat[param_name] = driver.gcpu.zeros_like(param)
+                self.v_hat[param_name] = driver.gcpu.full_like(param, -driver.gcpu.inf)
 
         if self.weight_decay != 0 and weight_decay:
-            grad = grad + self.weight_decay * param
+            param = param - self.learning_rate * self.weight_decay * param
 
         self.m[param_name] = self.beta1 * self.m[param_name] + (1 - self.beta1) * grad
         self.v[param_name] = self.beta2 * self.v[param_name] + (1 - self.beta2) * (grad ** 2)

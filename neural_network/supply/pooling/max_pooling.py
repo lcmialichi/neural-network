@@ -34,33 +34,29 @@ class MaxPooling(Pooling):
 
         unpooled_grad = driver.gcpu.zeros(self.input_shape)
 
-        # Obter índices relativos (dentro da janela)
         row_indices_rel, col_indices_rel = driver.gcpu.unravel_index(
             self.cached_pooling_indexes, 
             (self.shape[0], self.shape[1])
         )
 
-        # Calcular índices absolutos na entrada
         window_starts_i = (driver.gcpu.arange(output_height) * self.stride).reshape(1, -1, 1, 1)
         window_starts_j = (driver.gcpu.arange(output_width) * self.stride).reshape(1, 1, -1, 1)
 
         row_indices_abs = window_starts_i + row_indices_rel
         col_indices_abs = window_starts_j + col_indices_rel
 
-        # Garantir que os índices não ultrapassem os limites
         row_indices_abs = driver.gcpu.clip(row_indices_abs, 0, input_height - 1)
         col_indices_abs = driver.gcpu.clip(col_indices_abs, 0, input_width - 1)
 
-        # Distribuir os gradientes
         driver.gcpu.add.at(
             unpooled_grad,
             (
-                driver.gcpu.arange(batch_size)[:, None, None, None],  # Índices do batch
-                row_indices_abs,  # Índices das linhas
-                col_indices_abs,  # Índices das colunas
-                driver.gcpu.arange(channels)[None, None, None, :]  # Índices dos canais
+                driver.gcpu.arange(batch_size)[:, None, None, None],
+                row_indices_abs,
+                col_indices_abs,
+                driver.gcpu.arange(channels)[None, None, None, :]
             ),
-            grad  # Gradiente (sem dimensão extra)
+            grad
         )
 
         return unpooled_grad

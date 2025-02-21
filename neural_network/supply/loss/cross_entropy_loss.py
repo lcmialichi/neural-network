@@ -23,4 +23,4 @@ class CrossEntropyLoss:
             raise ValueError(f"Invalid reduction: {self.reduction}")
     
     def accuracy(self, y_pred, y_true) -> float:
-        return driver.gcpu.mean(driver.gcpu.argmax(y_pred, axis=1) == driver.gcpu.argmax(y_true, axis=1))
+        return driver.gcpu.mean(driver.gcpu.argmax(y_pred, axis=-1) == driver.gcpu.argmax(y_true, axis=-1))
