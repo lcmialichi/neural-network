@@ -11,7 +11,7 @@ class CrossEntropyLoss:
     def loss(self, y_pred, y_true) -> float:
         clipped_y_pred = driver.gcpu.clip(y_pred, self._epsilon, 1 - self._epsilon)
         
-        per_sample_loss = -driver.gcpu.sum(y_true * driver.gcpu.log(clipped_y_pred), axis=1)
+        per_sample_loss = -driver.gcpu.sum(y_true * driver.gcpu.log(clipped_y_pred), axis=-1)
         
         if self.reduction == 'mean':
             return driver.gcpu.mean(per_sample_loss)

@@ -29,7 +29,7 @@ class MaxPooling(Pooling):
     def unpooling(self, grad):
         if self.cached_pooling_indexes is None:
             raise RuntimeError("No cached max-pooling indexes available for unpooling.")
-
+        
         batch_size, output_height, output_width, channels = grad.shape
         _, input_height, input_width, _ = self.input_shape
 

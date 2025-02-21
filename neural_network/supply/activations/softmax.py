@@ -2,7 +2,7 @@ from neural_network.core import Activation
 from neural_network.gcpu import driver
 
 class Softmax(Activation):
-    def __init__(self, axis=1):
+    def __init__(self, axis=-1):
         self.axis = axis
 
     def activate(self, x, alpha=None):

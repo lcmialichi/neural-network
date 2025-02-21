@@ -90,7 +90,8 @@ class Kernel(Block):
     
     def backward(self, input_layer, y, delta):
         filters = self.filters()
-        num_filters, input_channels, fh, fw = filters.shape
+        fh, fw,input_channels, num_filters = filters.shape
+        
         if self.mode == 'train' and self.has_dropout():
             delta = self.get_dropout().backwards(delta)
             
@@ -105,17 +106,18 @@ class Kernel(Block):
 
         if self.has_activation():
             delta *= self.get_activation().derivate(self.logits())
-
+            
         padding = get_padding(
-            (input_layer.shape[2], input_layer.shape[3]), (fh, fw), self.stride, self.padding_type
+            (input_layer.shape[1], input_layer.shape[2]), (fh, fw), self.stride, self.padding_type
         )         
 
-        grad_bias = driver.gcpu.sum(delta, axis=(0, 2, 3))
-        batch_size, _, output_h, output_w = delta.shape
+        grad_bias = driver.gcpu.sum(delta, axis=(0, 1, 2))
+        batch_size, output_h, output_w, _ = delta.shape
         input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
+        
         delta_reshaped = delta.reshape(batch_size * output_h * output_w, num_filters)
         grad_filter = driver.gcpu.matmul(delta_reshaped.T, input_reshaped).reshape(filters.shape)
-        
+   
         if self.has_gradients_clipped():
             min_c, max_c = self.get_clip_gradients()
             grad_filter = driver.gcpu.clip(grad_filter, min_c, max_c)
@@ -131,9 +133,9 @@ class Kernel(Block):
             delta.reshape(batch_size * output_h * output_w, num_filters), 
             flipped_filters.reshape(num_filters, -1)
         )
-        
-        delta = delta_col.reshape(batch_size, output_h, output_w, input_channels, fh, fw)
-        delta = delta.transpose(0, 3, 1, 2, 4, 5).sum(axis=(4, 5))
+     
+        delta = delta_col.reshape(batch_size, output_h, output_w, fh, fw, input_channels)
+        delta = delta.transpose(0, 1, 2, 5, 3, 4).sum(axis=(4, 5))
 
         if self.stride > 1:
             expanded_delta = driver.gcpu.zeros(
@@ -141,5 +143,5 @@ class Kernel(Block):
             )
             expanded_delta[:, :, ::self.stride, ::self.stride] = delta
             delta = expanded_delta
-
+        
         return delta
