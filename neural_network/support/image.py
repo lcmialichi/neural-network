@@ -22,7 +22,7 @@ def im2col(image, filter_size: tuple[int, int], stride: int):
     col = driver.gcpu.lib.stride_tricks.as_strided(
         image, 
         shape=new_shape, 
-        strides=new_strides
+        strides=new_strides,
     )
     
     return col.reshape(-1, fh * fw * channels)
