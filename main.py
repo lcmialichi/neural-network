@@ -32,11 +32,11 @@ def create_configuration():
         )
     )
 
-    config.driver('gpu')
+    config.driver('cpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
-    config.loss_function(attr.CrossEntropyLoss())
+    config.loss_function(attr.BinaryCrossEntropyLoss())
 
     # ---- Convolutional Layers ----'
     kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
@@ -71,8 +71,8 @@ def create_configuration():
     layer1.activation(attr.Relu())
     
     # Output Layer
-    output = dense.add_layer(size=2)
-    output.activation(attr.Softmax())
+    output = dense.add_layer(size=1)
+    output.activation(attr.Sigmoid())
     output.initializer(attr.XavierUniform())
     
     return config

@@ -6,5 +6,5 @@ class Sigmoid(Activation):
         return 1 / (1 + driver.gcpu.exp(-x))
 
     def derivate(self, x, alpha = None):
-        return x * (1 - x)
+        return 1
     

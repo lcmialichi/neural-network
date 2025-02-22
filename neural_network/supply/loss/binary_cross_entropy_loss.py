@@ -2,8 +2,9 @@ from neural_network.gcpu import driver
 
 class BinaryCrossEntropyLoss:
     def _convert_labels(self, y_pred, y_true):
-        if y_pred.shape[-1] == 1 and y_true.shape[-1] > 1:
-            y_true = driver.gcpu.argmax(y_true, axis=1, keepdims=True)
+        """ Converte y_true de one-hot encoding para um vetor de rótulos binários. """
+        if y_true.shape[-1] > 1:
+            y_true = y_true[:, 1:2]
         return y_true
 
     def gradient(self, y_pred, y_true):
