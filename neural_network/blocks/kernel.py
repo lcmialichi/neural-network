@@ -90,7 +90,7 @@ class Kernel(Block):
     
     def backward(self, input_layer, y, delta):
         filters = self.filters()
-        fh, fw,input_channels, num_filters = filters.shape
+        fh, fw, input_channels, num_filters = filters.shape
         
         if self.mode == 'train' and self.has_dropout():
             delta = self.get_dropout().backwards(delta)
@@ -127,7 +127,7 @@ class Kernel(Block):
             
         self.update_filters(self.get_optimizer().update(f"kernel_filters_{self.kernel_id}", self.filters(), grad_filter))
 
-        flipped_filters = driver.gcpu.transpose(filters, (2, 0, 1, 3))
+        flipped_filters = driver.gcpu.transpose(filters, (3, 0, 1, 2))
         flipped_filters = driver.gcpu.flip(flipped_filters, axis=(1, 2))
         
         delta_col = driver.gcpu.matmul(delta_reshaped, flipped_filters.reshape(num_filters, -1))
