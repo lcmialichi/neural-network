@@ -15,7 +15,7 @@ EPOCHS = 25
 def create_configuration():
     config = Config()
 
-    config.driver('gpu')
+    config.driver('cpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)

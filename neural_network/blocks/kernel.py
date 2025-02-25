@@ -113,7 +113,8 @@ class Kernel(Block):
 
         grad_bias = driver.gcpu.sum(delta, axis=(0, 1, 2))
         batch_size, output_h, output_w, _ = delta.shape
-        input_reshaped = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
+        col = im2col(add_padding(input_layer, padding), (fh, fw), self.stride)
+        input_reshaped = col.reshape(-1, fh * fw * input_channels)
         
         delta_reshaped = delta.reshape(batch_size * output_h * output_w, num_filters)
         grad_filter = driver.gcpu.matmul(input_reshaped.T, delta_reshaped).reshape(filters.shape)   

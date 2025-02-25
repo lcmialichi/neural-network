@@ -19,13 +19,11 @@ def im2col(image, filter_size: tuple[int, int], stride: int):
         image.strides[3]
     )
     
-    col = driver.gcpu.lib.stride_tricks.as_strided(
+    return driver.gcpu.lib.stride_tricks.as_strided(
         image, 
         shape=new_shape, 
         strides=new_strides,
     )
-    
-    return col.reshape(-1, fh * fw * channels)
 
 def col2im(cols, output_shape, filter_size: tuple[int, int], stride: int):
     batch, channels, height, width = output_shape

@@ -15,7 +15,8 @@ def conv(input_layer, filters, stride: int, padding_type: Padding):
     output_width = (in_width + padding[1][0] + padding[1][1] - fw) // stride + 1
 
     col = im2col(input_padded, (fh, fw), stride)
-
+    col = col.reshape(-1, fh * fw * in_channels)
+    
     filters_reshaped = filters.transpose(0, 1, 2, 3).reshape(-1, out_channels)
     conv_output = driver.gcpu.matmul(col, filters_reshaped)
 
