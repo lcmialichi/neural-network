@@ -59,7 +59,6 @@ class Chart:
 
         self.ax1.set_title(f'{title} (Epoch {epoch + 1})', fontsize=14, weight='bold', pad=10)
 
-        # Redesenhar o gráfico
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 

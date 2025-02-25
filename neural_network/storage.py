@@ -1,7 +1,8 @@
 import pickle
 import os
+from neural_network.deserialize import Deserialize
 
-class Storage:
+class Storage():
     def __init__(self, path: str):
         self._path = path
         
@@ -18,7 +19,8 @@ class Storage:
     def get(self):
         try:
             with open(self._path, 'rb') as f:
-                return pickle.load(f)
+                deserializer = Deserialize(f)
+                return deserializer.load()
         except (FileNotFoundError, EOFError, pickle.UnpicklingError):
             raise SystemError(f"Unable to load model from cached file: '{self._path}'")
         
@@ -28,3 +30,5 @@ class Storage:
             
     def has(self):
         return  os.path.exists(self._path)
+    
+   

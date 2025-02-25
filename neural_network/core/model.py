@@ -11,9 +11,6 @@ class Model(BaseNetwork):
     _mode: str = 'test'
     
     def __init__(self, config: dict, storage: Union[None, Storage]):
-        if 'processor' not in config:
-            raise ValueError('processor not defined in configuration')
-        
         self._storage = storage
         self._processor = config.get('processor')
         self._block_output: list = []
@@ -64,7 +61,7 @@ class Model(BaseNetwork):
         return self.forward(x)
 
     def get_trainer(self):
-        return CnnTrainer(self, self.get_processor())
+        return CnnTrainer(self)
     
     def get_loss_function(self) -> "LossFunction":
         return self._loss_function

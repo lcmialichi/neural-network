@@ -14,29 +14,12 @@ EPOCHS = 25
 
 def create_configuration():
     config = Config()
-    config.set_processor(
-        ImageProcessor(
-            base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
-            image_size=IMAGE_SIZE,
-            batch_size=BATCH_SIZE,
-            split_ratios=(0.90, 0.10),
-            shuffle=True,
-            augmentation=True,
-            augmentation_params={
-                'rotation': 20,
-                'zoom': 0.2,
-                'horizontal_flip': True,
-                'shear': 0.2,
-                'fill_mode': 'nearest'
-            }
-        )
-    )
 
     config.driver('gpu')
     config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.with_cache(path='./data/cache/model.pkl')
     config.padding_type(Padding.SAME)
-    config.loss_function(attr.BinaryCrossEntropyLoss())
+    config.loss_function(attr.CrossEntropyLoss())
 
     # ---- Convolutional Layers ----'
     kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
@@ -71,11 +54,28 @@ def create_configuration():
     layer1.activation(attr.Relu())
     
     # Output Layer
-    output = dense.add_layer(size=1)
-    output.activation(attr.Sigmoid())
+    output = dense.add_layer(size=2)
+    output.activation(attr.Softmax())
     output.initializer(attr.XavierUniform())
     
     return config
+
+def data_set() -> ImageProcessor:
+    return ImageProcessor(
+            base_dir="./data/breast-histopathology-images/IDC_regular_ps50_idx5",
+            image_size=IMAGE_SIZE,
+            batch_size=BATCH_SIZE,
+            split_ratios=(0.80, 0.20),
+            shuffle=True,
+            augmentation=True,
+            augmentation_params={
+                'rotation': 20,
+                'zoom': 0.2,
+                'horizontal_flip': True,
+                'shear': 0.2,
+                'fill_mode': 'nearest'
+            }
+        )
 
 def create_app(config: Config) -> nn.App:
     return nn.app.App(
@@ -89,6 +89,7 @@ def create_app(config: Config) -> nn.App:
 def train_model(app: nn.App, plot: bool):
     app.model().set_training_mode()
     app.model().get_trainer().train(
+        processor=data_set(),
         epochs=EPOCHS,
         plot=Chart().plot_metrics if plot else None,
         callbacks=[attr.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=2, min_lr=1e-7)]
@@ -104,7 +105,7 @@ def validate_model(app: nn.App):
 
 def test_model(app: nn.App, plot: bool):
     app.model().set_test_mode()
-    app.model().get_tester().test(plot=Chart().plot_metrics if plot else None)
+    app.model().get_tester().test(processor=data_set(), plot=Chart().plot_metrics if plot else None)
 
 
 def main():

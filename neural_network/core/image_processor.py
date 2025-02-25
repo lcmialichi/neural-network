@@ -41,7 +41,10 @@ class ImageProcessor(Processor):
         self.augmentation = augmentation
         self.augmentation_params = default
         self.split_ratios = split_ratios
-        self.train_sample, self.validation_sample, self.test_sample = self._split_samples()
+        self.load_samples()
+        
+    def load_samples(self):
+        self.train_sample, self.validation_sample, self.test_sample = self._split_samples()   
 
     def _split_samples(self) -> Tuple[List[str], List[str], List[str]]:
         """Splits images into training, validation, and testing sets."""

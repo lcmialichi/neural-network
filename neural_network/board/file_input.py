@@ -25,7 +25,7 @@ class FileInput(Drawable):
     def display_image(self, file_path):
         try:
             image = Image.open(file_path)
-            image.thumbnail((200, 200))
+            image.thumbnail((500, 500))
             img_tk = ImageTk.PhotoImage(image)
             self.image_label.config(image=img_tk)
             self.image_label.image = img_tk
@@ -45,7 +45,7 @@ class FileInput(Drawable):
     def get_image_as_matrix(self):
         image = Image.open(self.selected_file_path).convert('RGB')
         image = image.resize(self.image_size)
-        return driver.gcpu.transpose(image, (2, 0, 1))
+        return image
     
     def draw(self):
         self.root = tk.Tk()

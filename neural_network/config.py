@@ -78,9 +78,6 @@ class Config:
     def with_no_cache(self):
         self._storage = None
     
-    def set_processor(self, processor: Processor):
-        self._config['processor'] = processor
-        
     def loss_function(self, loss_function: LossFunction):
         self._config['loss_function'] = loss_function
 

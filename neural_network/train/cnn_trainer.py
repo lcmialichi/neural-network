@@ -3,20 +3,22 @@ from neural_network.core.scheduler import Scheduler
 from .base_trainer import BaseTrainer
 from typing import Callable, Union, Tuple
 from tqdm import tqdm
+from neural_network.core.processor import Processor
 
 class CnnTrainer(BaseTrainer):
     def train(
             self,
+            processor: Processor,
             epochs: int = 10, 
             plot: Union[None, Callable] = None,
             callbacks: list = None
     ) -> None:
         for epoch in range(epochs):
-            epoch_loss = 0
-            epoch_accuracy = 0
+            epoch_loss, avg_loss = 0, 0
+            epoch_accuracy, avg_accuracy = 0, 0
             num_batches = 0 
             self._model.set_training_mode()
-            with tqdm(self._processor.get_train_batches(), desc=f'Epoch {epoch+1}/{epochs} (run)', unit='batch',  leave=False) as progress_bar:
+            with tqdm(processor.get_train_batches(), desc=f'Epoch {epoch+1}/{epochs} (run)', unit='batch',  leave=False) as progress_bar:
                 for batch_data, batch_labels in progress_bar:
                     batch_data = batch_data / 255.0                    
                     output = self._model.train(x_batch=batch_data, y_batch=batch_labels)
@@ -46,7 +48,7 @@ class CnnTrainer(BaseTrainer):
                 f"\033[1;36mtime\033[0m: {total_time:.2f} seconds",
             )
 
-            val_loss, val_accuracy = self._validate(epoch)
+            val_loss, val_accuracy = self._validate(epoch, processor)
 
             print(
                 f"\033[1;36mEpoch {epoch+1}/{epochs} (val)\033[0m"
@@ -64,12 +66,12 @@ class CnnTrainer(BaseTrainer):
             for callback in callbacks:
                 callback(self._model, metrics)
 
-    def _validate(self, epoch: int) -> Tuple[float, float]:
-        loss = 0
-        accuracy = 0
+    def _validate(self, epoch: int, processor: Processor) -> Tuple[float, float]:
+        loss, avg_loss = 0, 0
+        accuracy, avg_accuracy = 0, 0
         num_batches = 0
         self._model.set_test_mode()
-        with tqdm(self._processor.get_val_batches(), desc=f'Epoch {epoch+1} (val)', unit='batch', leave=False) as progress_bar:
+        with tqdm(processor.get_val_batches(), desc=f'Epoch {epoch+1} (val)', unit='batch', leave=False) as progress_bar:
             for batch_data, batch_labels in progress_bar:
                 
                 output = self._model.predict(batch_data / 255.0)

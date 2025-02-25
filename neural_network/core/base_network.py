@@ -37,10 +37,6 @@ class BaseNetwork(ABC):
     def get_processor(self) -> "Processor": 
         return self._processor
     
-    def set_processor(self, processor: Processor) -> None:
-        assert processor is not None, "Processor not defined"
-        self._processor = processor
-        
     def get_learning_rate(self) -> float: 
         return self._global_optimizer.get_learning_rate()
     
@@ -55,7 +51,7 @@ class BaseNetwork(ABC):
         pass
 
     def get_tester(self) -> Tester:
-        return Tester(self, self.get_processor())
+        return Tester(self)
 
     def get_output_loss(self, x, z):
         return self._loss_function.loss(x, z)
