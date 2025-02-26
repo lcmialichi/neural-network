@@ -5,6 +5,7 @@ from neural_network.gcpu import driver
 from typing import Tuple, List, Generator
 from neural_network.core.processor import Processor
 from PIL import ImageEnhance, ImageFilter
+from neural_network.core.augmentations import Augmentations
 import glob
 
 class ImageProcessor(Processor):
@@ -18,28 +19,15 @@ class ImageProcessor(Processor):
         augmentation: bool = False,
         augmentation_params: dict | None = None 
     ):
-        default = {
-            'rotation': 0,
-            'horizontal_flip': False,
-            'vertical_flip': False,
-            'brightness': 0.0,
-            'contrast': 0.0,
-            'random_crop': 0.0,
-            'blur': 0.0,
-            'shear': 0.0,
-            'zoom': 0.0,
-            'fill_mode': 'nearest'
-        }
-
-        if augmentation_params is not None:
-            default.update(augmentation_params)
+        if augmentation_params is None:
+            augmentation_params = {}
 
         self.base_dir = base_dir
         self.image_size = image_size
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.augmentation = augmentation
-        self.augmentation_params = default
+        self.augmentation_params = augmentation_params
         self.split_ratios = split_ratios
         self.load_samples()
         
@@ -116,68 +104,33 @@ class ImageProcessor(Processor):
         return self._generate_batches(self.test_sample, apply_mask=False)
 
     def _apply_augmentations(self, image):
-        """Applies a series of augmentations based on the provided settings."""
-        params = self.augmentation_params
-        fill_mode = params.get('fill_mode', 'nearest')
+
+        augmentations = self._get_supported_augmentations()
+
         fill_modes = {
             'nearest': None,
             'constant': (0, 0, 0),
             'reflect': 'reflect',
             'wrap': 'wrap'
         }
-        fill_value = fill_modes.get(fill_mode, None)
-        
-        if 'rotation' in params:
-            angle = random.uniform(-params['rotation'], params['rotation'])
-            image = image.rotate(angle, resample=Image.BICUBIC, fillcolor=fill_value if isinstance(fill_value, tuple) else None)
-        
-        if params['horizontal_flip'] and random.random() < 0.5:
-            image = image.transpose(Image.FLIP_LEFT_RIGHT)
-        
-        if params['vertical_flip'] and random.random() < 0.5:
-            image = image.transpose(Image.FLIP_TOP_BOTTOM)
-        
-        if 'brightness' in params:
-            factor = random.uniform(1 - params['brightness'], 1 + params['brightness'])
-            image = ImageEnhance.Brightness(image).enhance(factor)
-        
-        if 'contrast' in params:
-            factor = random.uniform(1 - params['contrast'], 1 + params['contrast'])
-            image = ImageEnhance.Contrast(image).enhance(factor)
-        
-        if 'random_crop' in params:
-            width, height = image.size
-            crop_size = (int((1 - params['random_crop']) * width), int((1 - params['random_crop']) * height))
-            left = random.randint(0, width - crop_size[0])
-            top = random.randint(0, height - crop_size[1])
-            image = image.crop((left, top, left + crop_size[0], top + crop_size[1]))
-            image = image.resize(self.image_size)
-        
-        if 'blur' in params:
-            image = image.filter(ImageFilter.GaussianBlur(radius=params['blur']))
-        
-        if 'shear' in params:
-            shear_factor = random.uniform(-params['shear'], params['shear'])
-            image = image.transform(
-                image.size,
-                Image.AFFINE,
-                (1, shear_factor, 0, shear_factor, 1, 0),
-                resample=Image.BICUBIC,
-                fillcolor=fill_value if isinstance(fill_value, tuple) else None
-            )
-        
-        if 'zoom' in params:
-            zoom_factor = 1 + random.uniform(0, params['zoom'])
-            width, height = image.size
-            new_width, new_height = int(width * zoom_factor), int(height * zoom_factor)
-            image = image.resize((new_width, new_height), resample=Image.BICUBIC)
-            left = (new_width - width) // 2
-            top = (new_height - height) // 2
-            image = image.crop((left, top, left + width, top + height))
-            
-            if fill_mode in ['constant', 'reflect', 'wrap']:
-                background = Image.new("RGB", (width, height), (0, 0, 0))
-                background.paste(image, (0, 0))
-                image = background
-        
+
+        fill_value = fill_modes.get(self.augmentation_params.pop('fill_mode', 'nearest'), None)
+
+        for key, value in self.augmentation_params.items():
+            handler = augmentations.get(key)
+            image = handler(image, value, fill_value)
+
         return image
+
+    def _get_supported_augmentations(self):
+        return {
+            'rotation': Augmentations.rotation,
+            'horizontal_flip': Augmentations.horizontal_flip,
+            'rotvertical_flipation': Augmentations.vertical_flip,
+            'brightness': Augmentations.brightness,
+            'contrast': Augmentations.contrast,
+            'random_crop': Augmentations.random_crop,
+            'blur': Augmentations.blur,
+            'shear': Augmentations.shear,
+            'zoom': Augmentations.zoom,
+        }
