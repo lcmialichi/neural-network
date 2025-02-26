@@ -126,7 +126,7 @@ class ImageProcessor(Processor):
         return {
             'rotation': Augmentations.rotation,
             'horizontal_flip': Augmentations.horizontal_flip,
-            'rotvertical_flipation': Augmentations.vertical_flip,
+            'vertical_flip': Augmentations.vertical_flip,
             'brightness': Augmentations.brightness,
             'contrast': Augmentations.contrast,
             'random_crop': Augmentations.random_crop,
