@@ -2,31 +2,37 @@ from PIL import Image, ImageEnhance, ImageFilter
 import random
 
 class Augmentations:
-    def rotation(self, image, arg, fill_mode):
+    @staticmethod
+    def rotation(image, arg, fill_mode):
         angle = random.uniform(-arg, arg)
         return image.rotate(angle, resample=Image.BICUBIC, fillcolor=fill_mode if isinstance(fill_mode, tuple) else None)
 
-    def horizontal_flip(self, image, arg, fill_mode):
+    @staticmethod
+    def horizontal_flip(image, arg, fill_mode):
         if arg and random.random() < 0.5:
             return image.transpose(Image.FLIP_LEFT_RIGHT)
 
         return image
 
-    def vertical_flip(self, image, arg, fill_mode):
+    @staticmethod
+    def vertical_flip(image, arg, fill_mode):
         if arg and random.random() < 0.5:
             return image.transpose(Image.FLIP_TOP_BOTTOM)
         
         return image
-
-    def brightness(self, image, arg, fill_mode):
+    
+    @staticmethod
+    def brightness(image, arg, fill_mode):
         factor = random.uniform(1 - arg, 1 + arg)
         return ImageEnhance.Brightness(image).enhance(factor)
-
-    def contrast(self, image, arg, fill_mode):
+    
+    @staticmethod
+    def contrast(image, arg, fill_mode):
         factor = random.uniform(1 - arg, 1 + arg)
         ImageEnhance.Contrast(image).enhance(factor)
 
-    def random_crop(self, image, arg, fill_mode):
+    @staticmethod
+    def random_crop(image, arg, fill_mode):
         width, height = image.size
         crop_size = (int((1 - arg) * width), int((1 - arg) * height))
         left = random.randint(0, width - crop_size[0])
@@ -34,10 +40,12 @@ class Augmentations:
         image = image.crop((left, top, left + crop_size[0], top + crop_size[1]))
         return image.resize(self.image_size)
 
-    def blur(self, image, arg, fill_mode):
+    @staticmethod
+    def blur(image, arg, fill_mode):
         return image.filter(ImageFilter.GaussianBlur(radius=arg))
 
-    def shear(self, image, arg, fill_mode):
+    @staticmethod
+    def shear(image, arg, fill_mode):
         shear_factor = random.uniform(-arg, arg)
         image = image.transform(
             image.size,
@@ -47,7 +55,8 @@ class Augmentations:
             fillcolor=fill_mode if isinstance(fill_mode, tuple) else None
         )
 
-    def zoom(self, image, arg, fill_mode):
+    @staticmethod
+    def zoom(image, arg, fill_mode):
         zoom_factor = 1 + random.uniform(0, arg)
         width, height = image.size
         new_width, new_height = int(width * zoom_factor), int(height * zoom_factor)
