@@ -32,7 +32,7 @@ class Tester:
         total_time = progress_bar.format_dict["elapsed"]
 
         print(
-            f" - \033[1;34mLoss\033[0m: {avg_loss:.4f}, "
+            f"\033[1;34mLoss\033[0m: {avg_loss:.4f}, "
             f"\033[1;34mAccuracy\033[0m: {avg_accuracy:.4f} "
             f"\033[1;33mbatches\033[0m: {num_batches}, "
             f"\033[1;36mtime\033[0m: {total_time:.2f} seconds"
