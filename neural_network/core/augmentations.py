@@ -29,7 +29,7 @@ class Augmentations:
     @staticmethod
     def contrast(image, arg, fill_mode):
         factor = random.uniform(1 - arg, 1 + arg)
-        ImageEnhance.Contrast(image).enhance(factor)
+        return ImageEnhance.Contrast(image).enhance(factor)
 
     @staticmethod
     def random_crop(image, arg, fill_mode):
@@ -38,7 +38,7 @@ class Augmentations:
         left = random.randint(0, width - crop_size[0])
         top = random.randint(0, height - crop_size[1])
         image = image.crop((left, top, left + crop_size[0], top + crop_size[1]))
-        return image.resize(self.image_size)
+        return image.resize((width, height))
 
     @staticmethod
     def blur(image, arg, fill_mode):
@@ -54,6 +54,8 @@ class Augmentations:
             resample=Image.BICUBIC,
             fillcolor=fill_mode if isinstance(fill_mode, tuple) else None
         )
+        
+        return image
 
     @staticmethod
     def zoom(image, arg, fill_mode):
