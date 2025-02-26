@@ -4,7 +4,6 @@ from PIL import Image
 from neural_network.gcpu import driver
 from typing import Tuple, List, Generator
 from neural_network.core.processor import Processor
-from PIL import ImageEnhance, ImageFilter
 from neural_network.core.augmentations import Augmentations
 import glob
 
@@ -69,8 +68,7 @@ class ImageProcessor(Processor):
             if self.augmentation and apply_mask:
                 image = self._apply_augmentations(image)
 
-            img_data = driver.gcpu.array(image.resize(self.image_size),)
-            return img_data
+            return driver.gcpu.array(image.resize(self.image_size))
         except Exception as e:
             raise SystemError(f"Unable to process the image {image_path}: {e}")
 
