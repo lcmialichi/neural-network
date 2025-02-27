@@ -73,3 +73,27 @@ class Augmentations:
             image = background
 
         return image
+    
+    @staticmethod
+    def width_shift_range(image, arg, fill_mode):
+        width, _ = image.size
+        shift = int(random.uniform(-arg, arg) * width)
+        return image.transform(
+            image.size,
+            Image.AFFINE,
+            (1, 0, shift, 0, 1, 0),
+            resample=Image.BICUBIC,
+            fillcolor=fill_mode if isinstance(fill_mode, tuple) else None
+        )
+
+    @staticmethod
+    def height_shift_range(image, arg, fill_mode):
+        _, height = image.size
+        shift = int(random.uniform(-arg, arg) * height)
+        return image.transform(
+            image.size,
+            Image.AFFINE,
+            (1, 0, 0, 0, 1, shift),
+            resample=Image.BICUBIC,
+            fillcolor=fill_mode if isinstance(fill_mode, tuple) else None
+        )
