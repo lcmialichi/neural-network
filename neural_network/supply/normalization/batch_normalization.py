@@ -61,7 +61,7 @@ class BatchNormalization:
             raise RuntimeError("No cached batch normalization data for backward pass.")
 
         x, normalized, _, _, inv, reduction_axes = self.cached_bn
-        m = driver.gcpu.prod([x.shape[i] for i in reduction_axes])
+        m = driver.gcpu.prod(driver.gcpu.array([x.shape[i] for i in reduction_axes]))
         
         dgamma = driver.gcpu.sum(dout * normalized, axis=reduction_axes, keepdims=True) if self.scale and self.trainable else None
         dbeta = driver.gcpu.sum(dout, axis=reduction_axes, keepdims=True) if self.center and self.trainable else None
