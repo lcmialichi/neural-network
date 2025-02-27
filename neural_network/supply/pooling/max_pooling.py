@@ -17,7 +17,6 @@ class MaxPooling(Pooling):
         output_width = (width - self.shape[1]) // self.stride + 1
 
         col = im2col(input, self.shape, self.stride)
-        col = col.reshape(batch_size, output_height, output_width, -1, channels)
         col_reshaped = col.reshape(batch_size, output_height, output_width, -1, channels)
         max_vals = driver.gcpu.max(col_reshaped,axis=3)
         max_idxs = driver.gcpu.argmax(col_reshaped, axis=3)
