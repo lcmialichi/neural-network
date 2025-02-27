@@ -102,16 +102,9 @@ class ImageProcessor(Processor):
         return self._generate_batches(self.test_sample, apply_mask=False)
 
     def _apply_augmentations(self, image):
-
         augmentations = self._get_supported_augmentations()
 
-        fill_modes = {
-            'nearest': None,
-            'constant': (0, 0, 0),
-            'reflect': 'reflect',
-            'wrap': 'wrap'
-        }
-
+        fill_modes = { 'nearest': None, 'constant': (0, 0, 0), 'reflect': 'reflect', 'wrap': 'wrap'}
         fill_value = fill_modes.get(self.augmentation_params.pop('fill_mode', 'nearest'), None)
 
         for key, value in self.augmentation_params.items():

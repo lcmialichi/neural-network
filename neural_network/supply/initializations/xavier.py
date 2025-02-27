@@ -13,7 +13,7 @@ class Xavier(Initialization):
         fan_in = channels_number * filter_shape[0] * filter_shape[1]
         fan_out = filter_number * filter_shape[0] * filter_shape[1]
         scale = driver.gcpu.sqrt(2.0 / (fan_in + fan_out))
-        return generator.normal(0, scale, (filter_number, channels_number, filter_shape[0], filter_shape[1]))
+        return generator.normal(0, scale, (*filter_shape, channels_number, filter_number))
         
     def generate_layer_bias(self, size: int) -> list:
         return driver.gcpu.zeros(size)

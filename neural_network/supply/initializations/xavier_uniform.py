@@ -13,7 +13,7 @@ class XavierUniform(Initialization):
         fan_in = channels_number * filter_shape[0] * filter_shape[1]
         fan_out = filter_number * filter_shape[0] * filter_shape[1]
         limit = driver.gcpu.sqrt(6.0 / (fan_in + fan_out))
-        return generator.uniform(-limit, limit, (filter_number, channels_number, filter_shape[0], filter_shape[1]))
+        return generator.uniform(-limit, limit, (*filter_shape, channels_number, filter_number))
         
     def generate_layer_bias(self, size: int) -> list:
         return driver.gcpu.zeros(size)
