@@ -18,7 +18,17 @@ class CnnTrainer(BaseTrainer):
             epoch_accuracy, avg_accuracy = 0, 0
             num_batches = 0 
             self._model.set_training_mode()
-            with tqdm(processor.get_train_batches(), desc=f'Epoch {epoch+1}/{epochs} (run)', unit='batch',  leave=False) as progress_bar:
+
+            print(f"\033[1;32mEpoch {epoch+1}/{epochs}: \033[0m")
+
+            total_batches = len(processor.train_sample)
+            current_batch = 1
+            with tqdm(processor.get_train_batches(), 
+                    desc=f'Batch {current_batch}/{current_batch}',
+                    total=total_batches,
+                    dynamic_ncols=True, 
+                    unit='batch',  
+                    leave=False) as progress_bar:
                 for batch_data, batch_labels in progress_bar:
                     batch_data = batch_data / 255.0                    
                     output = self._model.train(x_batch=batch_data, y_batch=batch_labels)
@@ -40,13 +50,13 @@ class CnnTrainer(BaseTrainer):
             val_loss, val_accuracy = self._validate(epoch, processor)
 
             print(
-                f"\033[1;32mEpoch {epoch+1}/{epochs} (avg)\033[0m"
-                f" - \033[1;34mLoss\033[0m: {avg_loss:.4f}, "
-                f"\033[1;34mAccuracy\033[0m: {avg_accuracy:.4f} "
-                f"\033[1;33m train batches\033[0m: {num_batches}, ",
-                f" - \033[1;34mLoss\033[0m: {val_loss:.4f}, "
-                f"\033[1;34mAccuracy\033[0m: {val_accuracy:.4f}"
-                f"\033[1;32mLearning rate\033[0m: {self._model.get_learning_rate()}, "
+                f"\033[1;32mEpoch {epoch+1}: \033[0m"
+                f" \033[1;34mloss\033[0m: {avg_loss:.4f}, "
+                f"\033[1;34maccuracy\033[0m: {avg_accuracy:.4f} "
+                f"\033[1;33mbatches\033[0m: {num_batches}, ",
+                f" - \033[1;34mval_loss\033[0m: {val_loss:.4f}, "
+                f"\033[1;34mval_accuracy\033[0m: {val_accuracy:.4f}"
+                f"\033[1;32mlearning rate\033[0m: {self._model.get_learning_rate()}"
             )
 
             metrics = {
