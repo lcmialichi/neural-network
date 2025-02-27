@@ -131,4 +131,6 @@ class ImageProcessor(Processor):
             'blur': Augmentations.blur,
             'shear': Augmentations.shear,
             'zoom': Augmentations.zoom,
+            'width_shift_range': Augmentations.width_shift_range,
+            'height_shift_range': Augmentations.height_shift_range,
         }
