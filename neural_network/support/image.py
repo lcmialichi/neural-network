@@ -3,27 +3,32 @@ from neural_network.gcpu import driver
 def im2col(image, filter_size: tuple[int, int], stride: int):
     batch, height, width, channels = image.shape
     fh, fw = filter_size
+
+    if fh > height or fw > width:
+        raise ValueError("The filter size must be smaller than the image dimensions.")
     
     output_height = (height - fh) // stride + 1
     output_width = (width - fw) // stride + 1
 
-    image = driver.gcpu.ascontiguousarray(image)
+    image_contig = driver.gcpu.ascontiguousarray(image)
     
     new_shape = (batch, output_height, output_width, fh, fw, channels)
     new_strides = (
-        image.strides[0],
-        image.strides[1] * stride,
-        image.strides[2] * stride,
-        image.strides[1],
-        image.strides[2],
-        image.strides[3]
+        image_contig.strides[0],
+        image_contig.strides[1] * stride,
+        image_contig.strides[2] * stride,
+        image_contig.strides[1],
+        image_contig.strides[2],
+        image_contig.strides[3]
     )
     
-    return driver.gcpu.lib.stride_tricks.as_strided(
-        image, 
+    cols_view = driver.gcpu.lib.stride_tricks.as_strided(
+        image_contig, 
         shape=new_shape, 
         strides=new_strides,
     )
+    
+    return cols_view.copy()
 
 def col2im(cols, output_shape, filter_size: tuple[int, int], stride: int):
     batch, channels, height, width = output_shape

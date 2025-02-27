@@ -36,25 +36,19 @@ class CnnTrainer(BaseTrainer):
                     self._model.step()
                     progress_bar.set_postfix(loss=f'{avg_loss:.4f}', accuracy=f'{avg_accuracy:.4f}')
             
-            total_time = progress_bar.format_dict["elapsed"]
             self._model.save_state()
-            
+            val_loss, val_accuracy = self._validate(epoch, processor)
+
             print(
                 f"\033[1;32mEpoch {epoch+1}/{epochs} (avg)\033[0m"
                 f" - \033[1;34mLoss\033[0m: {avg_loss:.4f}, "
                 f"\033[1;34mAccuracy\033[0m: {avg_accuracy:.4f} "
-                f"\033[1;33mbatches\033[0m: {num_batches}, ",
-                f"\033[1;32mLearning rate\033[0m: {self._model.get_learning_rate()}, "
-                f"\033[1;36mtime\033[0m: {total_time:.2f} seconds",
-            )
-
-            val_loss, val_accuracy = self._validate(epoch, processor)
-
-            print(
-                f"\033[1;36mEpoch {epoch+1}/{epochs} (val)\033[0m"
+                f"\033[1;33m train batches\033[0m: {num_batches}, ",
                 f" - \033[1;34mLoss\033[0m: {val_loss:.4f}, "
                 f"\033[1;34mAccuracy\033[0m: {val_accuracy:.4f}"
+                f"\033[1;32mLearning rate\033[0m: {self._model.get_learning_rate()}, "
             )
+
             metrics = {
                 'val_loss': val_loss,
                 'val_accurracy': val_accuracy,
