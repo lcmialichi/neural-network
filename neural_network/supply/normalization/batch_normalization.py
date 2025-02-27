@@ -23,18 +23,21 @@ class BatchNormalization:
         param_shape[axis] = num_filters
         param_shape = tuple(param_shape)
 
-        self._gamma = driver.gcpu.full(param_shape, gamma,) if scale else driver.gcpu.ones(param_shape,)
-        self._beta = driver.gcpu.full(param_shape, beta,) if center else driver.gcpu.zeros(param_shape,)
+        self._gamma = driver.gcpu.full(param_shape, gamma) if scale else None
+        self._beta = driver.gcpu.full(param_shape, beta) if center else None
         
-        self.running_mean = driver.gcpu.zeros(param_shape,)
-        self.running_var = driver.gcpu.ones(param_shape,)
+        self.running_mean = driver.gcpu.zeros(param_shape)
+        self.running_var = driver.gcpu.ones(param_shape)
         
         self.cached_bn = None
 
     def forward(self, x, training=False):
         positive_axis = self.axis % x.ndim
         reduction_axes = tuple(i for i in range(x.ndim) if i != positive_axis)
-        m = x.shape[reduction_axes[0]] * x.shape[reduction_axes[1]] * x.shape[reduction_axes[2]]
+        
+        m = 1
+        for i in reduction_axes:
+            m *= x.shape[i]
         
         if training:
             batch_mean = driver.gcpu.mean(x, axis=reduction_axes, keepdims=True)
@@ -62,7 +65,7 @@ class BatchNormalization:
         if self.cached_bn is None:
             raise RuntimeError("No cached batch normalization data for backward pass.")
 
-        x, normalized, _, _, inv, reduction_axes, m = self.cached_bn
+        _, normalized, _, _, inv, reduction_axes, m = self.cached_bn
 
         if self.scale and self.trainable:
             dgamma = driver.gcpu.sum(dout * normalized, axis=reduction_axes, keepdims=True)
@@ -81,7 +84,7 @@ class BatchNormalization:
         dx = (1. / m) * inv * (m * dx_hat - sum_dxhat - normalized * sum_dxhat_normalized)
 
         return dx, dgamma, dbeta
-
+    
     def get_gamma(self):
         return self._gamma
 
