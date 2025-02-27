@@ -21,15 +21,16 @@ class CnnTrainer(BaseTrainer):
 
             print(f"\033[1;32mEpoch {epoch+1}/{epochs}: \033[0m")
 
-            total_batches = len(processor.train_sample)
-            current_batch = 1
+            total_sampple = len(processor.train_sample) / processor.batch_size
+            current_batch = 0
             with tqdm(processor.get_train_batches(), 
                     desc=f'Batch {current_batch}/{current_batch}',
-                    total=total_batches,
+                    total=total_sampple,
                     dynamic_ncols=True, 
                     unit='batch',  
                     leave=False) as progress_bar:
                 for batch_data, batch_labels in progress_bar:
+                    current_batch += 1
                     batch_data = batch_data / 255.0                    
                     output = self._model.train(x_batch=batch_data, y_batch=batch_labels)
                     
