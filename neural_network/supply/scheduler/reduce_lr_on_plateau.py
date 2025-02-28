@@ -6,7 +6,7 @@ class ReduceLROnPlateau:
                  factor: float = 0.5, 
                  patience: int = 5, 
                  min_lr: float = 1e-6, 
-                 threshold: float = 0.1,
+                 threshold: float = 0.0,
                  mode: str = 'min',
                  cooldown: int = 0,
                  verbose: bool = False):
