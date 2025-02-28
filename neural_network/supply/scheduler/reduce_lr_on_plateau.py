@@ -26,7 +26,7 @@ class ReduceLROnPlateau:
     def __call__(self, model: BaseNetwork, metrics: dict):
         data = metrics.get(self.monitor)
         if data is None:
-            self.print_if_verbose(f"Métrica {self.monitor} não encontrada nos metrics.")
+            self.print_if_verbose(f"unknown metric {self.monitor}.")
             return
 
         if self.cooldown_counter > 0:
@@ -38,7 +38,6 @@ class ReduceLROnPlateau:
         if improvement:
             self.best_value = data
             self.wait = 0
-            self.print_if_verbose(f"Nova melhor métrica ({self.monitor}): {data}")
         else:
             self.wait += 1
             if self.wait >= self.patience:
@@ -46,7 +45,7 @@ class ReduceLROnPlateau:
                 new_lr = max(self.min_lr, current_lr * self.factor)
                 if new_lr < current_lr:
                     model.set_learning_rate(new_lr)
-                    self.print_if_verbose(f"Reduzindo learning rate de {current_lr} para {new_lr} (métrica {self.monitor}: {data})")
+                    self.print_if_verbose(f"Reducing learning rate from {current_lr} to {new_lr} (metric {self.monitor}: {data})")
                     self.cooldown_counter = self.cooldown
                 self.wait = 0
 
