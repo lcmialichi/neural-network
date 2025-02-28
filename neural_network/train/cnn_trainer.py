@@ -105,7 +105,7 @@ class CnnTrainer(BaseTrainer):
                 f" \033[1;34mloss\033[0m: {loss:.4f}, "
                 f"\033[1;34maccuracy\033[0m: {accuracy:.4f} "
                 f"\033[1;33mbatches\033[0m: {num_batches}, ",
-                f" - \033[1;34mval_loss\033[0m: {val_loss:.4f}, "
+                f"\033[1;34mval_loss\033[0m: {val_loss:.4f}, "
                 f"\033[1;34mval_accuracy\033[0m: {val_accuracy:.4f}, "
                 f"\033[1;32mlearning rate\033[0m: {learning_rate}"
             )
