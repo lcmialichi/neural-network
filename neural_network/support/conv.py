@@ -53,3 +53,4 @@ def get_output_size(input_size: tuple[int, int], filter_size: tuple[int, int],
         (input_size[1] + padding[1][0] + padding[1][1] - filter_size[1]) // stride + 1
     )
     
+    

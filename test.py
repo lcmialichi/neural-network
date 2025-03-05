@@ -48,25 +48,6 @@ def test_forward_pass():
 
     config = Config()
     config.padding_type(Padding.SAME)
-    
-    config.set_processor(
-        ImageProcessor(
-            base_dir="/content/neural-network/data/breast-histopathology-images/IDC_regular_ps50_idx5",
-            image_size=(50, 50),
-            batch_size=32,
-            split_ratios=(0.90, 0.10),
-            shuffle=True,
-            augmentation=True,
-            augmentation_params={
-                'rotation': 20,
-                'zoom': 0.2,
-                'horizontal_flip': True,
-                'shear': 0.2,
-                'fill_mode': 'nearest'
-            }
-        )
-    )
-    
     config.loss_function(attr.CrossEntropyLoss())
 
     kernel = Kernel(number=2, shape=(2, 2), stride=1, bias=False)
