@@ -45,9 +45,6 @@ class MaxPooling(Pooling):
         row_indices_abs = window_starts_i + row_indices_rel
         col_indices_abs = window_starts_j + col_indices_rel
 
-        row_indices_abs = driver.gcpu.clip(row_indices_abs, 0, input_height - 1)
-        col_indices_abs = driver.gcpu.clip(col_indices_abs, 0, input_width - 1)
-
         driver.gcpu.add.at(
             unpooled_grad,
             (

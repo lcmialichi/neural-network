@@ -23,10 +23,10 @@ class CnnTrainer(BaseTrainer):
             print(f"\033[1;32mEpoch {epoch+1}/{epochs}: \033[0m")
 
             total_sampple = math.ceil(len(processor.train_sample) / processor.batch_size)
-            with tqdm(processor.get_train_batches(), 
+            with tqdm(processor.get_train_batches(),
                     total=total_sampple,
                     dynamic_ncols=True, 
-                    unit='batch',  
+                    unit='batch',
                     leave=False) as progress_bar:
                 for batch_data, batch_labels in progress_bar:
                     batch_data = batch_data / 255.0                    
@@ -48,14 +48,14 @@ class CnnTrainer(BaseTrainer):
             self._model.save_state()
             val_loss, val_accuracy = self._validate(epoch, processor)
 
-            print(
-                f"\033[1;32mEpoch {epoch+1}: \033[0m"
-                f" \033[1;34mloss\033[0m: {avg_loss:.4f}, "
-                f"\033[1;34maccuracy\033[0m: {avg_accuracy:.4f} "
-                f"\033[1;33mbatches\033[0m: {num_batches}, ",
-                f" - \033[1;34mval_loss\033[0m: {val_loss:.4f}, "
-                f"\033[1;34mval_accuracy\033[0m: {val_accuracy:.4f}"
-                f"\033[1;32mlearning rate\033[0m: {self._model.get_learning_rate()}"
+            self._epoch_result(
+                epoch=epoch+1,
+                accuracy=avg_accuracy,
+                loss=avg_loss,
+                num_batches=num_batches,
+                val_accuracy=val_accuracy,
+                val_loss=val_loss,
+                learning_rate=self._model.get_learning_rate()
             )
 
             metrics = {
@@ -89,3 +89,23 @@ class CnnTrainer(BaseTrainer):
                 progress_bar.set_postfix(loss=f'{avg_loss:.4f}', accuracy=f'{avg_accuracy:.4f}')
                 
         return avg_loss, avg_accuracy
+    
+    
+    def _epoch_result(self, 
+        epoch,
+        loss,
+        accuracy,
+        val_loss,
+        val_accuracy,
+        learning_rate,
+        num_batches
+    ):
+        print(
+                f"\033[1;32mEpoch {epoch}: \033[0m",
+                f"\033[1;34mloss\033[0m: {loss:.4f}, ",
+                f"\033[1;34maccuracy\033[0m: {accuracy:.4f} ",
+                f"\033[1;33mbatches\033[0m: {num_batches}, ",
+                f"\033[1;34mval_loss\033[0m: {val_loss:.4f}, ",
+                f"\033[1;34mval_accuracy\033[0m: {val_accuracy:.4f}, ",
+                f"\033[1;32mlearning rate\033[0m: {learning_rate}"
+            )
