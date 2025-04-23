@@ -3,7 +3,7 @@
 This package contains an implementation of a convolutional neural network (CNN) designed to detect breast cancer in histopathology images. The library allows you to experiment with different configurations, including weight initialization techniques, activation functions, dropout, and hyperparameters, enabling customization to meet your specific needs. Additionally, the network is adaptable to other image classification problems.
 
 <p align="center">
-  <img src="img/result.png"/>
+  <img src="img/result.gif" width="400">
 </p>
 
 ### Features
