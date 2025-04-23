@@ -10,7 +10,6 @@ class Tester:
         num_batches = 0
         test_loss, avg_loss = 0, 0
         test_accuracy, avg_accuracy = 0, 0
-
         with tqdm(processor.get_test_batches(), desc='Testing', unit='batch', leave=False) as progress_bar:
              for batch_data, batch_labels in progress_bar:
                 batch_data = batch_data / 255.0

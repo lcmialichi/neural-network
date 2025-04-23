@@ -15,13 +15,22 @@ EPOCHS = 25
 def create_configuration():
     config = Config()
 
+    # using GPU, if not availible switch to 'cpu'
     config.driver('cpu')
-    config.set_global_optimizer(attr.Adam(learning_rate=0.001))
+
+    # cache model to this file
     config.with_cache(path='./data/cache/model.pkl')
+
+    config.set_global_optimizer(attr.Adam(learning_rate=0.001))
     config.padding_type(Padding.SAME)
-    config.loss_function(attr.CrossEntropyLoss())
+    config.loss_function(attr.BinaryCrossEntropyLoss())
 
     # ---- Convolutional Layers ----'
+    kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
+    kernel.initializer(attr.HeUniform())
+    kernel.activation(attr.Relu())
+    kernel.batch_normalization()
+
     kernel = config.add_kernel(number=32, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
@@ -32,40 +41,56 @@ def create_configuration():
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
-    kernel.max_pooling(shape=(3, 3), stride=2)
+
+    kernel = config.add_kernel(number=64, shape=(3, 3), stride=1)
+    kernel.initializer(attr.HeUniform())
+    kernel.activation(attr.Relu())
+    kernel.batch_normalization()
+    kernel.max_pooling(shape=(2, 2), stride=2)
 
     kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
-    kernel.max_pooling(shape=(3, 3), stride=2)
 
     kernel = config.add_kernel(number=128, shape=(3, 3), stride=1)
     kernel.initializer(attr.HeUniform())
     kernel.activation(attr.Relu())
     kernel.batch_normalization()
-    kernel.max_pooling(shape=(3, 3), stride=2)
+    kernel.max_pooling(shape=(2, 2), stride=2)
 
     config.flatten()
     dense = config.dense()
 
-    layer1 = dense.add_layer(size=128, dropout=0.3)
-    layer1.initializer(attr.HeUniform())
-    layer1.activation(attr.Relu())
-    
+    layer = dense.add_layer(size=128)
+    layer.initializer(attr.HeUniform())
+    layer.activation(attr.Relu())
+
+    layer = dense.add_layer(size=64)
+    layer.initializer(attr.HeUniform())
+    layer.activation(attr.Relu())
+
+    layer = dense.add_layer(size=64, dropout=0.2)
+    layer.initializer(attr.HeUniform())
+    layer.activation(attr.Relu())
+
+    layer = dense.add_layer(size=24, dropout=0.3)
+    layer.initializer(attr.HeUniform())
+    layer.activation(attr.Relu())
+
     # Output Layer
-    output = dense.add_layer(size=2)
-    output.activation(attr.Softmax())
+    output = dense.add_layer(size=1)
+    output.activation(attr.Sigmoid())
     output.initializer(attr.XavierUniform())
     
     return config
 
 def data_set() -> ImageProcessor:
     return ImageProcessor(
-            base_dir="./data/breast-histopathology-images/IDC_regular_ps50_idx5",
+            base_dir="./data/breast-histopathology-images",
             image_size=IMAGE_SIZE,
             batch_size=BATCH_SIZE,
-            split_ratios=(0.80, 0.20),
+            split_ratios=(0.80, 0.10, 0.10),
             shuffle=True,
             augmentation=True,
             augmentation_params={

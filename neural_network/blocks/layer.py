@@ -45,6 +45,7 @@ class Layer(Block):
 
         if self.has_activation():
             output = self.get_activation().activate(output)
+            print(output)
                 
         if self.mode == 'train' and self.has_dropout():
             output = self.get_dropout().forward(output)

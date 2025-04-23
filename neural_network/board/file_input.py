@@ -36,7 +36,7 @@ class FileInput(Drawable):
         if self.selected_file_path:
             try:
                 handler = self.get_handler()
-                result = handler(driver.gcpu.array([self.get_image_as_matrix()]) / 255.00)
+                result = handler(driver.gcpu.array([self.get_image_as_matrix()])/ 255.00)
                 label = self.get_label(result)
                 messagebox.showinfo("Analise completa", f"{label}!")
             except Exception as e:
